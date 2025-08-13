@@ -136,10 +136,22 @@ def index():
 def create_admin():
     """Emergency route to create admin user if none exists."""
     try:
+        # Check if admin user exists
         admin_user = User.query.filter_by(username='admin').first()
         if admin_user:
-            return f"Admin user already exists! Use username: 'admin', password: 'admin123'"
+            # Test password to ensure it's working
+            test_result = admin_user.check_password('admin123')
+            return f"""
+            <h2>Admin user already exists!</h2>
+            <p><strong>Username:</strong> admin</p>
+            <p><strong>Password:</strong> admin123</p>
+            <p><strong>Password check:</strong> {'✅ Working' if test_result else '❌ Not working'}</p>
+            <p><strong>User ID:</strong> {admin_user.id}</p>
+            <p><strong>Is Admin:</strong> {admin_user.is_admin}</p>
+            <p><a href='/auth/login' style='background: blue; color: white; padding: 10px; text-decoration: none;'>Login Here</a></p>
+            """
         
+        # Create new admin user
         admin_user = User(
             username='admin',
             email='admin@fantraxleague.com',
@@ -149,10 +161,21 @@ def create_admin():
         db.session.add(admin_user)
         db.session.commit()
         
-        return "✅ Admin user created successfully!<br>Username: 'admin'<br>Password: 'admin123'<br><a href='/auth/login'>Login Here</a>"
+        # Verify the user was created and password works
+        test_user = User.query.filter_by(username='admin').first()
+        test_result = test_user.check_password('admin123') if test_user else False
+        
+        return f"""
+        <h2>✅ Admin user created successfully!</h2>
+        <p><strong>Username:</strong> admin</p>
+        <p><strong>Password:</strong> admin123</p>
+        <p><strong>User ID:</strong> {test_user.id if test_user else 'None'}</p>
+        <p><strong>Password test:</strong> {'✅ Working' if test_result else '❌ Failed'}</p>
+        <p><a href='/auth/login' style='background: blue; color: white; padding: 10px; text-decoration: none;'>Login Here</a></p>
+        """
         
     except Exception as e:
-        return f"❌ Error creating admin user: {str(e)}"
+        return f"❌ Error creating admin user: {str(e)}<br><br>Stack trace: {repr(e)}"
 
 @bp.route('/league_tables')
 @bp.route('/league_tables/<int:season_id>')
