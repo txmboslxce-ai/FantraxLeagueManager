@@ -34,6 +34,28 @@ def dashboard():
     return render_template('admin/dashboard.html', title='Admin Dashboard',
                          season=current_season)
 
+@bp.route('/import_data')
+@login_required
+@admin_required
+def import_data():
+    """Manually trigger full data import."""
+    import os
+    try:
+        # Execute the full import script
+        app_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        script_path = os.path.join(app_dir, 'full_data_import.py')
+        
+        if os.path.exists(script_path):
+            exec(open(script_path).read())
+            flash('✅ Full data import completed successfully! 24 teams, 5 divisions, MOTM data imported.', 'success')
+        else:
+            flash('❌ Import script not found', 'error')
+            
+    except Exception as e:
+        flash(f'❌ Import failed: {str(e)}', 'error')
+        
+    return redirect(url_for('admin.dashboard'))
+
 @bp.route('/divisions', methods=['GET', 'POST'])
 @login_required
 @admin_required

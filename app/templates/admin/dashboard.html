@@ -3,6 +3,20 @@
 {% block content %}
 <h1 class="mb-4">Admin Dashboard</h1>
 
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h5><i class="fas fa-database me-2"></i>Database Setup</h5>
+            <p class="mb-2">If your database is missing teams or division data, click below to import the full league structure:</p>
+            <a href="{{ url_for('admin.import_data') }}" class="btn btn-primary" 
+               onclick="return confirm('This will import 24 teams, 5 divisions, and sample MOTM data. Continue?')">
+                <i class="fas fa-download me-2"></i>Import Full League Data
+            </a>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <!-- Season Management -->
     <div class="col-md-6 mb-4">
