@@ -86,6 +86,15 @@ This repository is currently configured to commit the `fantasy_league.db` file s
 - SQLite is single-file and not ideal for concurrent production usage; prefer PostgreSQL in real production.
 - If you later migrate to PostgreSQL, set `DATABASE_URL` and run `flask db upgrade` plus appropriate data import.
 
+### Automatic Import to PostgreSQL on Render
+
+The service includes `import_sqlite_to_postgres.py` which will, on startup, copy data from the committed `fantasy_league.db` into the Postgres database defined by `DATABASE_URL` if:
+
+- `AUTO_IMPORT` env var is truthy (e.g. `true`), and
+- The target DB currently has no rows in the `season` table.
+
+It is safe to leave this enabled; subsequent restarts detect existing data and skip.
+
 ## Automatic Admin Creation
 
 On application startup, if no admin user exists, the app creates one:
