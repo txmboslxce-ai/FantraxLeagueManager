@@ -8,5 +8,5 @@ pip install -r requirements.txt
 # Run database migrations
 python -m flask db upgrade
 
-# Initialize database with basic data if needed
-python init_production_db.py 
+# Import production data (teams, seasons, divisions, sample MOTM data)
+python import_production_data.py 
