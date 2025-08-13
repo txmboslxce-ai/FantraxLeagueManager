@@ -43,7 +43,7 @@ def export_data_to_sql():
         # Export manager months
         manager_months = ManagerMonth.query.all()
         for mm in manager_months:
-            f.write(f"INSERT INTO manager_month (name, season_id, start_gameweek_id, end_gameweek_id, is_complete) VALUES ('{mm.name}', (SELECT id FROM season WHERE name = '{mm.season.name}'), (SELECT id FROM gameweek WHERE number = {mm.start_gameweek.number} AND season_id = (SELECT id FROM season WHERE name = '{mm.season.name}')), (SELECT id FROM gameweek WHERE number = {mm.end_gameweek.number} AND season_id = (SELECT id FROM season WHERE name = '{mm.season.name}')), {mm.is_complete});\n")
+            f.write(f"INSERT INTO manager_month (name, season_id, start_gameweek_id, end_gameweek_id) VALUES ('{mm.name}', (SELECT id FROM season WHERE name = '{mm.season.name}'), (SELECT id FROM gameweek WHERE number = {mm.start_gameweek.number} AND season_id = (SELECT id FROM season WHERE name = '{mm.season.name}')), (SELECT id FROM gameweek WHERE number = {mm.end_gameweek.number} AND season_id = (SELECT id FROM season WHERE name = '{mm.season.name}')));\n")
         
         # Export MOTM awards
         motm_awards = ManagerOfTheMonth.query.all()

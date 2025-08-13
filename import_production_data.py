@@ -138,8 +138,7 @@ def import_production_data():
             name='August 2024',
             season_id=season_2024.id,
             start_gameweek_id=gw1.id,
-            end_gameweek_id=gw4.id,
-            is_complete=True
+            end_gameweek_id=gw4.id
         )
         db.session.add(august_2024)
         db.session.flush()
