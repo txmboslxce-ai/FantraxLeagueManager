@@ -18,6 +18,8 @@ services:
         fromDatabase:
           name: fantrax-db
           property: connectionString
+      - key: AUTO_IMPORT
+        value: "true"
 
 databases:
   - name: fantrax-db
