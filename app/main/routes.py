@@ -450,10 +450,14 @@ def manager_of_the_month():
     if current_season:
         months = ManagerMonth.query.filter_by(season_id=current_season.id).all()
         
-        # Get all divisions for the current season
-        divisions = Division.query.join(TeamSeason).filter(
+        # Get all divisions for the current season (PostgreSQL-compatible)
+        division_subquery = db.session.query(TeamSeason.division_id).filter(
             TeamSeason.season_id == current_season.id
-        ).distinct().order_by(
+        ).distinct().subquery()
+        
+        divisions = Division.query.filter(
+            Division.id.in_(db.session.query(division_subquery.c.division_id))
+        ).order_by(
             db.case(
                 {
                     'Premier League': 1,
