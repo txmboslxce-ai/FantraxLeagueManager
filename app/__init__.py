@@ -55,6 +55,52 @@ def create_app(config_class=Config):
             # Database might not be initialized yet (e.g., before migrations); ignore silently
             pass
 
+        # Attempt inline data import if using Postgres and tables are empty and AUTO_IMPORT is set.
+        try:
+            from sqlalchemy import text, create_engine, MetaData
+            truthy = {"1","true","yes","on","y","t"}
+            if os.environ.get('AUTO_IMPORT','').lower() in truthy:
+                # Only proceed if target is Postgres and season table empty
+                if 'postgres' in str(db.engine.url):
+                    season_count = 0
+                    try:
+                        season_count = db.session.execute(text('SELECT COUNT(*) FROM season')).scalar()
+                    except Exception:
+                        pass
+                    if season_count == 0:
+                        sqlite_path = os.path.join(os.path.dirname(__file__), '..', 'fantasy_league.db')
+                        sqlite_path = os.path.abspath(sqlite_path)
+                        if os.path.exists(sqlite_path):
+                            print('[inline-import] Starting inline import from fantasy_league.db')
+                            source_engine = create_engine(f'sqlite:///{sqlite_path}')
+                            source_meta = MetaData()
+                            source_meta.reflect(bind=source_engine)
+                            target_meta = MetaData()
+                            target_meta.reflect(bind=db.engine)
+                            source_conn = source_engine.connect()
+                            target_conn = db.engine.connect()
+                            trans = target_conn.begin()
+                            try:
+                                for table in source_meta.sorted_tables:
+                                    if table.name not in target_meta.tables:
+                                        continue
+                                    rows = source_conn.execute(table.select()).mappings().all()
+                                    if not rows:
+                                        continue
+                                    target_table = target_meta.tables[table.name]
+                                    target_conn.execute(target_table.insert(), rows)
+                                    print(f'[inline-import] Copied {len(rows)} rows into {table.name}')
+                                trans.commit()
+                                print('[inline-import] Import complete')
+                            except Exception as e:
+                                trans.rollback()
+                                print('[inline-import] Import failed', e)
+                            finally:
+                                source_conn.close()
+                                target_conn.close()
+        except Exception as e:
+            print('[inline-import] Skipped due to error:', e)
+
     return app
 
 from app import models 
