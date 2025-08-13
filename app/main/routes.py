@@ -7,9 +7,34 @@ import markdown
 from datetime import datetime, date
 
 def _initialize_database():
-    """Initialize database with basic data if empty."""
+    """Initialize database with full league data if empty."""
     try:
-        # Create a basic season if none exists
+        # Check if we need full initialization
+        season_count = Season.query.count()
+        team_count = Team.query.count()
+        
+        if season_count == 0 or team_count == 0:
+            print("Database is empty, running full data import...")
+            
+            # Import the full dataset
+            import subprocess
+            import os
+            
+            # Get the directory of the current file
+            app_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            script_path = os.path.join(app_dir, 'full_data_import.py')
+            
+            # Execute the full import script
+            exec(open(script_path).read())
+            
+            return True
+        else:
+            print(f"Database already has {season_count} seasons and {team_count} teams")
+            return True
+            
+    except Exception as e:
+        print(f"Error during database initialization: {e}")
+        # Fallback to basic initialization
         season = Season(
             name='2025/26',
             start_date=date(2025, 8, 1),
@@ -19,12 +44,10 @@ def _initialize_database():
         db.session.add(season)
         db.session.flush()
         
-        # Create a Premier League division
         division = Division(name='Premier League', season_id=season.id)
         db.session.add(division)
         db.session.flush()
         
-        # Create some gameweeks
         for week in range(1, 5):
             gameweek = Gameweek(
                 number=week,
@@ -34,15 +57,11 @@ def _initialize_database():
             )
             db.session.add(gameweek)
         
-        # Create basic rules
         rules = Rule(content="Basic league rules. Please update in admin panel.")
         db.session.add(rules)
         
         db.session.commit()
         return True
-    except Exception as e:
-        db.session.rollback()
-        return False
 
 @bp.route('/')
 @bp.route('/index')
