@@ -6,7 +6,7 @@ set -o errexit
 pip install -r requirements.txt
 
 # Run database migrations
-flask db upgrade
+python -m flask db upgrade
 
-# Start Gunicorn
-exec gunicorn wsgi:app --bind 0.0.0.0:$PORT 
+# Initialize database with basic data if needed
+python init_production_db.py 

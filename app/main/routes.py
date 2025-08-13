@@ -8,7 +8,15 @@ import markdown
 @bp.route('/')
 @bp.route('/index')
 def index():
-    current_season = Season.query.filter_by(is_current=True).first()
+    try:
+        current_season = Season.query.filter_by(is_current=True).first()
+    except Exception as e:
+        # Database not initialized yet - return a simple message
+        return render_template('main/index.html', 
+                             divisions=[], 
+                             latest_motm_data={}, 
+                             error_message="Database is being initialized. Please refresh in a moment.")
+    
     if current_season:
         divisions = Division.query.filter_by(season_id=current_season.id).order_by(
             db.case(
