@@ -11,6 +11,7 @@ Safe to leave in start sequence; it will become a no-op after first successful i
 """
 import os
 import sys
+import argparse
 from sqlalchemy import create_engine, MetaData, text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -19,7 +20,9 @@ from app import create_app, db
 TRUTHY = {"1","true","yes","on","y","t"}
 
 
-def should_run():
+def should_run(manual_trigger=False):
+    if manual_trigger:
+        return True
     auto = os.environ.get("AUTO_IMPORT", "").lower()
     return auto in TRUTHY
 
@@ -28,9 +31,17 @@ def log(msg):
     print(f"[import_sqlite] {msg}")
 
 
-def main():
-    if not should_run():
-        log("AUTO_IMPORT disabled; skipping.")
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Import SQLite snapshot into Postgres")
+    parser.add_argument('--run', action='store_true', help='Run even if AUTO_IMPORT not set')
+    parser.add_argument('--force', action='store_true', help='Import even if data already exists (may duplicate)')
+    parser.add_argument('--truncate', action='store_true', help='Truncate existing tables before importing (destructive)')
+    args = parser.parse_args(argv)
+
+    log(f"Started import script (manual_run={args.run}, force={args.force}, truncate={args.truncate})")
+
+    if not should_run(args.run):
+        log("AUTO_IMPORT disabled and --run not provided; skipping.")
         return
 
     app = create_app()
@@ -42,7 +53,8 @@ def main():
             return
 
         # Ensure tables exist (migrations should have run in build phase)
-        force = os.environ.get('FORCE_IMPORT', '').lower() in TRUTHY
+        env_force = os.environ.get('FORCE_IMPORT', '').lower() in TRUTHY
+        force = args.force or env_force
         try:
             season_count = db.session.execute(text("SELECT COUNT(*) FROM season")).scalar()
             log(f"Existing season rows in target: {season_count}")
@@ -52,10 +64,10 @@ def main():
             has_data = False
 
         if has_data and not force:
-            log("Target already has data; skipping import (use FORCE_IMPORT=true to override).")
+            log("Target already has data; skipping import (use FORCE_IMPORT=true, --force, or truncate).")
             return
         if has_data and force:
-            log("FORCE_IMPORT enabled; proceeding to re-seed (this may duplicate rows).")
+            log("FORCE import enabled; proceeding to re-seed (this may duplicate rows unless --truncate).")
 
         sqlite_path = os.path.join(os.path.dirname(__file__), 'fantasy_league.db')
         if not os.path.exists(sqlite_path):
@@ -78,6 +90,14 @@ def main():
                 target_conn.execute(text('SET session_replication_role = replica;'))
             except Exception:
                 pass
+
+            if has_data and force and args.truncate:
+                # Truncate all target tables we will populate (simple order: reverse dependency not handled; rely on CASCADE)
+                try:
+                    log("Truncating existing tables (cascade)...")
+                    target_conn.execute(text('TRUNCATE TABLE ' + ', '.join([t.name for t in target_meta.sorted_tables if t.name in source_meta.tables]) + ' CASCADE;'))
+                except Exception as e:
+                    log(f"Truncate failed (continuing): {e}")
 
             for table in source_meta.sorted_tables:
                 if table.name not in target_meta.tables:
