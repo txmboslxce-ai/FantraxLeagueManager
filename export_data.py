@@ -38,7 +38,7 @@ def export_data_to_sql():
         # Export team seasons
         team_seasons = TeamSeason.query.all()
         for ts in team_seasons:
-            f.write(f"INSERT INTO team_season (team_id, season_id, division_id, points, games_played, wins, draws, losses, goals_for, goals_against, position) VALUES ((SELECT id FROM team WHERE name = '{ts.team.name}'), (SELECT id FROM season WHERE name = '{ts.season.name}'), (SELECT id FROM division WHERE name = '{ts.division.name}' AND season_id = (SELECT id FROM season WHERE name = '{ts.season.name}')), {ts.points}, {ts.games_played}, {ts.wins}, {ts.draws}, {ts.losses}, {ts.goals_for}, {ts.goals_against}, {ts.position});\n")
+            f.write(f"INSERT INTO team_season (team_id, season_id, division_id, points, total_score, position) VALUES ((SELECT id FROM team WHERE name = '{ts.team.name}'), (SELECT id FROM season WHERE name = '{ts.season.name}'), (SELECT id FROM division WHERE name = '{ts.division.name}' AND season_id = (SELECT id FROM season WHERE name = '{ts.season.name}')), {ts.points}, {ts.total_score}, {ts.position});\n")
         
         # Export manager months
         manager_months = ManagerMonth.query.all()

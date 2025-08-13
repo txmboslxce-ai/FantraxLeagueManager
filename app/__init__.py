@@ -2,7 +2,14 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
-from flask_bootstrap import Bootstrap
+import os
+
+# Use Bootstrap4 in production, Bootstrap in development
+if os.environ.get('FLASK_ENV') == 'production':
+    from flask_bootstrap import Bootstrap4 as BootstrapClass
+else:
+    from flask_bootstrap import Bootstrap as BootstrapClass
+
 from config import Config
 
 db = SQLAlchemy()
@@ -10,7 +17,7 @@ migrate = Migrate()
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 login_manager.login_message_category = 'info'
-bootstrap = Bootstrap()
+bootstrap = BootstrapClass()
 
 def create_app(config_class=Config):
     app = Flask(__name__)

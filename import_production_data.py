@@ -117,12 +117,7 @@ def import_production_data():
             season_id=season_2025.id,
             division_id=division.id,
             points=0,
-            games_played=0,
-            wins=0,
-            draws=0,
-            losses=0,
-            goals_for=0,
-            goals_against=0,
+            total_score=0.0,
             position=i+1
         )
         db.session.add(team_season)
