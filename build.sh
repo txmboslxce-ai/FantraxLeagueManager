@@ -2,11 +2,23 @@
 # exit on error
 set -o errexit
 
-# Install Python dependencies
+echo "==> Installing Python dependencies..."
 pip install -r requirements.txt
 
-# Run database migrations
+echo "==> Running database migrations..."
 python -m flask db upgrade
 
-# Import production data (teams, seasons, divisions, sample MOTM data)
-python import_production_data.py 
+echo "==> Checking if database needs initialization..."
+python -c "
+from app import create_app, db
+from app.models import Season
+app = create_app()
+with app.app_context():
+    if Season.query.count() == 0:
+        print('Database is empty, running initialization...')
+        exec(open('import_production_data.py').read())
+    else:
+        print('Database already has data, skipping initialization')
+"
+
+echo "==> Build completed successfully!" 

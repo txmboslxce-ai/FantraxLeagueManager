@@ -4,12 +4,57 @@ from app.models import Season, Division, Team, TeamSeason, Fixture, CupCompetiti
 from app import db
 from sqlalchemy import or_
 import markdown
+from datetime import datetime, date
+
+def _initialize_database():
+    """Initialize database with basic data if empty."""
+    try:
+        # Create a basic season if none exists
+        season = Season(
+            name='2025/26',
+            start_date=date(2025, 8, 1),
+            end_date=date(2026, 5, 31),
+            is_current=True
+        )
+        db.session.add(season)
+        db.session.flush()
+        
+        # Create a Premier League division
+        division = Division(name='Premier League', season_id=season.id)
+        db.session.add(division)
+        db.session.flush()
+        
+        # Create some gameweeks
+        for week in range(1, 5):
+            gameweek = Gameweek(
+                number=week,
+                season_id=season.id,
+                deadline=datetime(2025, 8, 1),
+                is_current=week == 1
+            )
+            db.session.add(gameweek)
+        
+        # Create basic rules
+        rules = Rule(content="Basic league rules. Please update in admin panel.")
+        db.session.add(rules)
+        
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        return False
 
 @bp.route('/')
 @bp.route('/index')
 def index():
     try:
         current_season = Season.query.filter_by(is_current=True).first()
+        
+        # If no season exists, initialize the database
+        if not current_season:
+            _initialize_database()
+            current_season = Season.query.filter_by(is_current=True).first()
+            
     except Exception as e:
         # Database not initialized yet - return a simple message
         return render_template('main/index.html', 
