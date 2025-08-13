@@ -36,20 +36,26 @@ def main():
     app = create_app()
     with app.app_context():
         target_engine = db.engine
+        log(f"Target engine URL: {target_engine.url}")
         if 'sqlite' in str(target_engine.url):
             log("Target DB is SQLite; nothing to import.")
             return
 
         # Ensure tables exist (migrations should have run in build phase)
+        force = os.environ.get('FORCE_IMPORT', '').lower() in TRUTHY
         try:
-            has_data = db.session.execute(text("SELECT COUNT(*) FROM season")).scalar() > 0
+            season_count = db.session.execute(text("SELECT COUNT(*) FROM season")).scalar()
+            log(f"Existing season rows in target: {season_count}")
+            has_data = season_count > 0
         except SQLAlchemyError as e:
-            log(f"Cannot query target database (season table missing?): {e}; aborting import.")
-            return
+            log(f"Cannot query target database (season table missing yet?). Proceeding anyway: {e}")
+            has_data = False
 
-        if has_data:
-            log("Target already has data; skipping import.")
+        if has_data and not force:
+            log("Target already has data; skipping import (use FORCE_IMPORT=true to override).")
             return
+        if has_data and force:
+            log("FORCE_IMPORT enabled; proceeding to re-seed (this may duplicate rows).")
 
         sqlite_path = os.path.join(os.path.dirname(__file__), 'fantasy_league.db')
         if not os.path.exists(sqlite_path):
@@ -76,6 +82,7 @@ def main():
             for table in source_meta.sorted_tables:
                 if table.name not in target_meta.tables:
                     continue
+                log(f"Preparing to copy table {table.name}")
                 rows = source_conn.execute(table.select()).mappings().all()
                 if not rows:
                     continue
