@@ -60,16 +60,23 @@ def create_app(config_class=Config):
             from sqlalchemy import text, create_engine, MetaData
             truthy = {"1","true","yes","on","y","t"}
             if os.environ.get('AUTO_IMPORT','').lower() in truthy:
-                # Only proceed if target is Postgres and season table empty
+                # Only proceed if target is Postgres and key tables empty
                 if 'postgres' in str(db.engine.url):
                     season_count = 0
+                    team_count = 0
                     try:
-                        season_count = db.session.execute(text('SELECT COUNT(*) FROM season')).scalar()
+                        season_count = db.session.execute(text('SELECT COUNT(*) FROM season')).scalar() or 0
                     except Exception:
                         pass
-                    if season_count == 0:
+                    try:
+                        team_count = db.session.execute(text('SELECT COUNT(*) FROM team')).scalar() or 0
+                    except Exception:
+                        pass
+                    print(f"[inline-import] season_count={season_count} team_count={team_count}")
+                    if season_count == 0 or team_count == 0:
                         sqlite_path = os.path.join(os.path.dirname(__file__), '..', 'fantasy_league.db')
                         sqlite_path = os.path.abspath(sqlite_path)
+                        print(f"[inline-import] sqlite_path={sqlite_path} exists={os.path.exists(sqlite_path)}")
                         if os.path.exists(sqlite_path):
                             print('[inline-import] Starting inline import from fantasy_league.db')
                             source_engine = create_engine(f'sqlite:///{sqlite_path}')
