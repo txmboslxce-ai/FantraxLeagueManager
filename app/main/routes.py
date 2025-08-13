@@ -1,6 +1,6 @@
 from flask import render_template, redirect, url_for, flash, request
 from app.main import bp
-from app.models import Season, Division, Team, TeamSeason, Fixture, CupCompetition, Title, Gameweek, CupRound, Rule, ManagerMonth, ManagerOfTheMonth, CupGroup, CupGroupMatch
+from app.models import Season, Division, Team, TeamSeason, Fixture, CupCompetition, Title, Gameweek, CupRound, Rule, ManagerMonth, ManagerOfTheMonth, CupGroup, CupGroupMatch, User
 from app import db
 from sqlalchemy import or_
 import markdown
@@ -59,6 +59,17 @@ def _initialize_database():
         
         rules = Rule(content="Basic league rules. Please update in admin panel.")
         db.session.add(rules)
+        
+        # Create default admin user
+        admin_user = User.query.filter_by(username='admin').first()
+        if not admin_user:
+            admin_user = User(
+                username='admin',
+                email='admin@fantraxleague.com',
+                is_admin=True
+            )
+            admin_user.set_password('admin123')
+            db.session.add(admin_user)
         
         db.session.commit()
         return True
@@ -120,6 +131,28 @@ def index():
                              latest_motm_month=latest_motm_month,
                              motm_standings=motm_standings)
     return render_template('main/index.html', title='Home')
+
+@bp.route('/create_admin')
+def create_admin():
+    """Emergency route to create admin user if none exists."""
+    try:
+        admin_user = User.query.filter_by(username='admin').first()
+        if admin_user:
+            return f"Admin user already exists! Use username: 'admin', password: 'admin123'"
+        
+        admin_user = User(
+            username='admin',
+            email='admin@fantraxleague.com',
+            is_admin=True
+        )
+        admin_user.set_password('admin123')
+        db.session.add(admin_user)
+        db.session.commit()
+        
+        return "✅ Admin user created successfully!<br>Username: 'admin'<br>Password: 'admin123'<br><a href='/auth/login'>Login Here</a>"
+        
+    except Exception as e:
+        return f"❌ Error creating admin user: {str(e)}"
 
 @bp.route('/league_tables')
 @bp.route('/league_tables/<int:season_id>')

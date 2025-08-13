@@ -7,7 +7,7 @@ This will populate the database with the full league structure.
 import os
 import sys
 from app import create_app, db
-from app.models import Season, Division, Team, TeamSeason, Gameweek, Title, Rule, ManagerMonth, ManagerOfTheMonth
+from app.models import Season, Division, Team, TeamSeason, Gameweek, Title, Rule, ManagerMonth, ManagerOfTheMonth, User
 from datetime import datetime, date
 
 def import_full_data():
@@ -223,6 +223,20 @@ For any questions or disputes, contact the league administrator.
     rules = Rule(content=rules_content.strip())
     db.session.add(rules)
     
+    # Create default admin user
+    admin_user = User.query.filter_by(username='admin').first()
+    if not admin_user:
+        admin_user = User(
+            username='admin',
+            email='admin@fantraxleague.com',
+            is_admin=True
+        )
+        admin_user.set_password('admin123')  # Default password - should be changed!
+        db.session.add(admin_user)
+        print("Created admin user: username='admin', password='admin123'")
+    else:
+        print("Admin user already exists")
+    
     db.session.commit()
     
     print("✅ Full data import completed successfully!")
@@ -232,6 +246,7 @@ For any questions or disputes, contact the league administrator.
     print(f"  - 38 gameweeks per season")
     print(f"  - 3 Manager of the Month periods with 9 awards")
     print(f"  - Complete league rules")
+    print(f"  - Admin user (username: 'admin', password: 'admin123')")
     print("Database is fully populated and ready for use!")
 
 if __name__ == '__main__':
