@@ -3,3 +3,6 @@
 *.db
 __pycache__/
 *.pyc
+
+# Allow committing the current league database (explicitly required)
+!fantasy_league.db

@@ -79,6 +79,23 @@ If you get relationship errors after deployment:
 2. Run the initialization script: `python init_production_db.py`
 3. Restart the application
 
+## Shipping the Existing SQLite Database
+
+This repository is currently configured to commit the `fantasy_league.db` file so that a snapshot of the current league state can be deployed directly (the `.gitignore` rule for `*.db` is overridden for this specific filename). Be aware:
+
+- SQLite is single-file and not ideal for concurrent production usage; prefer PostgreSQL in real production.
+- If you later migrate to PostgreSQL, set `DATABASE_URL` and run `flask db upgrade` plus appropriate data import.
+
+## Automatic Admin Creation
+
+On application startup, if no admin user exists, the app creates one:
+
+- Username: `admin`
+- Email: `admin@example.com`
+- Password: value of `DEFAULT_ADMIN_PASSWORD` env var, else `admin`
+
+Change this password immediately after first login in production.
+
 ## File Structure
 
 - `migrations/` - Database migration files (commit these)

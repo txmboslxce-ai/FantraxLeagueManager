@@ -42,7 +42,19 @@ def create_app(config_class=Config):
     
     from app.admin import bp as admin_bp
     app.register_blueprint(admin_bp, url_prefix='/admin')
-    
+    # Ensure at least one admin user exists (for fresh deployments)
+    from app.models import User
+    with app.app_context():
+        try:
+            if User.query.filter_by(is_admin=True).first() is None:
+                default_admin = User(username='admin', email='admin@example.com', is_admin=True)
+                default_admin.set_password(os.environ.get('DEFAULT_ADMIN_PASSWORD', 'admin'))
+                db.session.add(default_admin)
+                db.session.commit()
+        except Exception:
+            # Database might not be initialized yet (e.g., before migrations); ignore silently
+            pass
+
     return app
 
 from app import models 
