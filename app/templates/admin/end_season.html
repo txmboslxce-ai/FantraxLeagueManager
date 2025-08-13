@@ -1,0 +1,35 @@
+{% extends "admin/base.html" %}
+
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>End Season</h1>
+    <div class="alert alert-warning">
+        <strong>Warning!</strong> This will end the current season ({{season.name}}) and create a new season with promotions and relegations.
+        Make sure all matches are completed and scores are entered before proceeding.
+    </div>
+
+    <form method="post">
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+            <p>This action will:</p>
+            <ul>
+                <li>Mark the current season ({{season.name}}) as completed</li>
+                <li>Create the new 2025/26 season</li>
+                <li>Set up Premier League and Championship divisions for the new season</li>
+                <li>Handle promotions and relegations</li>
+                <li>Create 38 gameweeks for the new season</li>
+            </ul>
+        </div>
+        <div class="mb-3 form-check">
+            {{ form.confirm(class="form-check-input") }}
+            {{ form.confirm.label(class="form-check-label") }}
+        </div>
+        <div class="d-flex justify-content-between">
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">Cancel</a>
+            {{ form.submit(class="btn btn-danger") }}
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Modern mobile-first styles similar to MOTM page */
+    .table-container {
+        background: #fff;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        position: relative;
+    }
+    
+    .table-modern {
+        width: 100%;
+        min-width: 800px;  /* Minimum width to prevent squishing */
+        border-collapse: collapse;
+    }
+
+    .table-modern tr {
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .table-modern tr:last-child {
+        border-bottom: none;
+    }
+
+    .table-modern td, 
+    .table-modern th {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+
+    .team-cell {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .winner-badge {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 0.8rem;
+        font-weight: 500;
+        background: #FFD700;
+        color: black;
+    }
+
+    .team-name {
+        font-weight: 500;
+        color: #000;
+        text-decoration: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+    }
+    
+    .table-modern th:nth-child(1) { width: 15%; } /* Month */
+    .table-modern th:nth-child(2) { width: 20%; } /* Team Name */
+    .table-modern th:nth-child(3) { width: 15%; } /* Manager */
+    .table-modern th:nth-child(4) { width: 15%; } /* League */
+
+    .month-header {
+        font-size: 1.25rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .breadcrumb-nav {
+        margin-bottom: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .table-modern td, 
+        .table-modern th {
+            padding: 0.5rem 0.25rem;
+            font-size: 0.85rem;
+        }
+
+        .winner-badge {
+            width: 20px;
+            height: 20px;
+            font-size: 0.75rem;
+        }
+
+        .table-modern td.text-center {
+            padding: 0.5rem 0.15rem;
+        }
+
+        .hide-mobile {
+            display: none;
+        }
+
+        /* Ensure the season filter dropdown stays full width */
+        .form-select {
+            width: 100%;
+        }
+
+        /* Add a subtle shadow to hint at scrolling */
+        .table-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 20px;
+            background: linear-gradient(to right, transparent, rgba(0,0,0,0.1));
+            pointer-events: none;
+        }
+    }
+</style>
+
+<div class="container">
+    <nav aria-label="breadcrumb" class="breadcrumb-nav">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('main.manager_of_the_month') }}">Manager of the Month</a>
+            </li>
+            <li class="breadcrumb-item active">Previous Winners</li>
+        </ol>
+    </nav>
+
+    <h1 class="month-header">Manager of the Month Winners</h1>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <form method="GET" class="mb-4">
+                <select name="season_id" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Seasons</option>
+                    {% for season in seasons %}
+                        <option value="{{ season.id }}" {% if selected_season and selected_season.id == season.id %}selected{% endif %}>
+                            {{ season.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+
+    {% if awards %}
+    <div class="table-container">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                                    <th>Month</th>
+                                    <th>Team Name</th>
+                                    <th>Manager</th>
+                                    <th>League</th>
+                                    <th class="text-center">P</th>
+                                    <th class="text-center hide-mobile">W</th>
+                                    <th class="text-center hide-mobile">D</th>
+                                    <th class="text-center hide-mobile">L</th>
+                                    <th class="text-center">Pts</th>
+                                    <th class="text-center">PF</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            {% for award in awards %}
+            {% set stats = award.month.get_team_stats(award.team_id) %}
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="winner-badge me-1">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div>
+                            <strong>{{ award.month.name }}</strong>
+                            <small class="text-muted d-block">
+                                GW{{ award.month.start_gameweek.number }}-{{ award.month.end_gameweek.number }}
+                            </small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <a href="{{ url_for('main.team_profile', team_id=award.team.id) }}" class="team-name">
+                        {{ award.team.name }}
+                    </a>
+                </td>
+                <td>
+                    {{ award.team.manager_name }}
+                </td>
+                <td>
+                    {% set team_season = award.team.seasons|selectattr('season_id', 'eq', award.month.season.id)|first %}
+                    {% if team_season %}
+                        {{ team_season.division.name }}
+                    {% endif %}
+                </td>
+                <td class="text-center">{{ stats.played }}</td>
+                <td class="text-center hide-mobile">{{ stats.wins }}</td>
+                <td class="text-center hide-mobile">{{ stats.draws }}</td>
+                <td class="text-center hide-mobile">{{ stats.losses }}</td>
+                <td class="text-center"><strong>{{ stats.points }}</strong></td>
+                <td class="text-center">{{ "%.2f"|format(stats.goals_for) }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <div class="alert alert-info">
+            <p class="mb-0">No Manager of the Month winners found yet.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

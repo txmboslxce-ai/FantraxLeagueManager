@@ -1,0 +1,12 @@
+{% extends "admin/base.html" %}
+{% block content %}
+  <h1>Edit Rules</h1>
+  <form method="post">
+    {{ form.hidden_tag() }}
+    <div class="mb-3">
+      {{ form.content.label }}
+      {{ form.content(class="form-control", rows=10) }}
+    </div>
+    {{ form.submit(class="btn btn-primary") }}
+  </form>
+{% endblock %}

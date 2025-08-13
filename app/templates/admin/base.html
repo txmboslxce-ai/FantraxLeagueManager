@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <!-- Admin Sidebar -->
+    <div class="col-md-3 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Admin Menu</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('admin.dashboard') }}" 
+                   class="list-group-item list-group-item-action {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+                    Dashboard
+                </a>
+                <a href="{{ url_for('admin.manage_seasons') }}" 
+                   class="list-group-item list-group-item-action {% if request.endpoint == 'admin.manage_seasons' %}active{% endif %}">
+                    Seasons
+                </a>
+                <a href="{{ url_for('admin.manage_divisions') }}" 
+                   class="list-group-item list-group-item-action {% if request.endpoint == 'admin.manage_divisions' %}active{% endif %}">
+                    Divisions
+                </a>
+                <a href="{{ url_for('admin.manage_teams') }}" 
+                   class="list-group-item list-group-item-action {% if request.endpoint == 'admin.manage_teams' %}active{% endif %}">
+                    Teams
+                </a>
+                <a href="{{ url_for('admin.manage_fixtures') }}" 
+                   class="list-group-item list-group-item-action {% if request.endpoint == 'admin.manage_fixtures' %}active{% endif %}">
+                    Fixtures
+                </a>
+                <a href="{{ url_for('admin.upload_scores') }}" 
+                   class="list-group-item list-group-item-action {% if request.endpoint == 'admin.upload_scores' %}active{% endif %}">
+                    Upload Scores
+                </a>
+                <a href="{{ url_for('admin.manage_cups') }}" 
+                   class="list-group-item list-group-item-action {% if request.endpoint == 'admin.manage_cups' %}active{% endif %}">
+                    Cup Competitions
+                </a>
+                <a href="{{ url_for('admin.manage_manager_month') }}" 
+                   class="list-group-item list-group-item-action {% if request.endpoint == 'admin.manage_manager_month' %}active{% endif %}">
+                    Manager of the Month
+                </a>
+                <a href="{{ url_for('admin.end_season') }}" 
+                   class="list-group-item list-group-item-action {% if request.endpoint == 'admin.end_season' %}active{% endif %}">
+                    End Season
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content Area -->
+    <div class="col-md-9">
+        {% block admin_content %}{% endblock %}
+    </div>
+</div>
+{% endblock %} 

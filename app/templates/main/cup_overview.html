@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Cup Competitions</h1>
+    
+    {% if season %}
+        <div class="row">
+            {% for cup in cups %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h2 class="h5 mb-0">{{ cup.name }}</h2>
+                    </div>
+                    <div class="card-body">
+                        {% set latest_round = cup.rounds|sort(attribute='order')|last %}
+                        {% if latest_round %}
+                            <p class="mb-2">Current Stage: {{ latest_round.name }}</p>
+                            {% if latest_round.is_complete %}
+                                <p class="mb-2">Status: <span class="badge bg-success">Complete</span></p>
+                            {% else %}
+                                <p class="mb-2">Status: <span class="badge bg-warning">In Progress</span></p>
+                            {% endif %}
+                            
+                            {% if latest_round.first_leg_gameweek %}
+                                <p class="mb-2">First Leg: Gameweek {{ latest_round.first_leg_gameweek.number }}</p>
+                            {% endif %}
+                            {% if latest_round.second_leg_gameweek %}
+                                <p class="mb-2">Second Leg: Gameweek {{ latest_round.second_leg_gameweek.number }}</p>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted mb-0">No rounds scheduled yet.</p>
+                        {% endif %}
+                        
+                        <div class="mt-3">
+                            <a href="{{ url_for('main.cup_detail', cup_id=cup.id) }}" class="btn btn-primary">View Details</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <p class="mb-0">No active season found. Please contact the administrator to set up a new season.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %} 

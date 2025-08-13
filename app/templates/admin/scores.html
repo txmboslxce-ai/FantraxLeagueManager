@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% from 'bootstrap/form.html' import render_form %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Admin</a></li>
+                <li class="breadcrumb-item active">Upload Scores</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Upload Form -->
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="h4 mb-0">Upload Scores</h2>
+            </div>
+            <div class="card-body">
+                {{ render_form(form) }}
+                
+                <div class="mt-4">
+                    <h5>Instructions:</h5>
+                    <ol>
+                        <li>Select the gameweek and division for the scores you're uploading</li>
+                        <li>Paste your scores in the format:</li>
+                        <pre>Home Team    Home Score    Away Team    Away Score</pre>
+                        <li>Each line should contain one match</li>
+                        <li>Team names must match exactly (including apostrophes)</li>
+                        <li>All fixtures for the selected gameweek must be included</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Fixtures -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="h4 mb-0">Recent Fixtures</h2>
+            </div>
+            <div class="card-body">
+                {% if recent_fixtures %}
+                    <div class="list-group">
+                        {% for fixture in recent_fixtures %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">GW{{ fixture.gameweek.number }}</small>
+                                <small class="text-muted">{{ fixture.division.name }}</small>
+                            </div>
+                            <div class="text-center mt-2">
+                                <span>{{ fixture.home_team.name }}</span>
+                                {% if fixture.home_score is not none and fixture.away_score is not none %}
+                                    <span class="badge {% if fixture.home_score > fixture.away_score %}bg-success{% elif fixture.home_score < fixture.away_score %}bg-danger{% else %}bg-secondary{% endif %} mx-2">
+                                        {{ "%.2f"|format(fixture.home_score) }} - {{ "%.2f"|format(fixture.away_score) }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary mx-2">vs</span>
+                                {% endif %}
+                                <span>{{ fixture.away_team.name }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No recent fixtures found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

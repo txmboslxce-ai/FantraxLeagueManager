@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Modern mobile-first styles */
+    .table-container {
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }
+    
+    .view-selector {
+        background: #f8f9fa;
+        padding: 0.5rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .view-selector button {
+        flex: 1;
+        padding: 0.5rem;
+        border: none;
+        background: transparent;
+        color: #666;
+        font-weight: 500;
+    }
+    
+    .view-selector button.active {
+        background: #fff;
+        color: #000;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .table-modern {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table-modern tr {
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .table-modern tr:last-child {
+        border-bottom: none;
+    }
+
+    .table-modern td, 
+    .table-modern th {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+
+    .team-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .position {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .position-first {
+        background: #FFD700;
+        color: black;
+    }
+
+    .position-second {
+        background: #0066cc;
+        color: white;
+    }
+
+    .position-relegation {
+        background: #ff0000;
+        color: white;
+    }
+
+    .position-top-scorer {
+        background: #800080;
+        color: white;
+    }
+
+    .position-first-and-top-scorer {
+        background: linear-gradient(135deg, #FFD700 50%, #800080 50%);
+        color: black;
+    }
+
+    .position-second-and-top-scorer {
+        background: linear-gradient(135deg, #0066cc 50%, #800080 50%);
+        color: white;
+    }
+
+    .position-relegation-and-top-scorer {
+        background: linear-gradient(135deg, #ff0000 50%, #800080 50%);
+        color: white;
+    }
+
+    .position-normal {
+        background: #f0f0f0;
+        color: #666;
+    }
+
+    .team-name {
+        font-weight: 500;
+        color: #000;
+        text-decoration: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 150px;
+        display: block;
+    }
+
+    /* Stats view specific styles */
+    .stats-view .hide-stats {
+        display: none;
+    }
+
+    /* Form view specific styles */
+    .form-view .hide-form {
+        display: none;
+    }
+
+    .form-indicator {
+        width: 20px;
+        height: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 0.7rem;
+        font-weight: 500;
+        margin: 0 1px;
+    }
+
+    .form-W {
+        background: #00b300;
+        color: white;
+    }
+
+    .form-D {
+        background: #666;
+        color: white;
+    }
+
+    .form-L {
+        background: #ff0000;
+        color: white;
+    }
+
+    .table-legend {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-style: italic;
+        color: #666;
+    }
+
+    .legend-item {
+        display: inline-block;
+        margin-right: 1.5rem;
+    }
+
+    .legend-circle {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+        vertical-align: middle;
+    }
+
+    .legend-circle.gold {
+        background: #FFD700;
+    }
+
+    .legend-circle.blue {
+        background: #0066cc;
+    }
+
+    .legend-circle.purple {
+        background: #800080;
+    }
+
+    .legend-circle.red {
+        background: #ff0000;
+    }
+
+    .legend-circle.split {
+        background: linear-gradient(135deg, #FFD700 50%, #800080 50%);
+    }
+
+    @media (max-width: 768px) {
+        .table-modern td, 
+        .table-modern th {
+            padding: 0.5rem 0.25rem;
+            font-size: 0.85rem;
+        }
+
+        .position {
+            width: 20px;
+            height: 20px;
+            font-size: 0.75rem;
+        }
+
+        .team-name {
+            max-width: 100px;
+        }
+
+        .hide-mobile {
+            display: table-cell !important;
+        }
+
+        .table-modern td.text-center {
+            padding: 0.5rem 0.15rem;
+        }
+    }
+</style>
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <form method="GET" class="d-flex gap-3 mobile-stack">
+                <select name="season_id" class="form-select" onchange="this.form.submit()">
+                    {% for season in all_seasons %}
+                        <option value="{{ season.id }}" {% if selected_season and selected_season.id == season.id %}selected{% endif %}>
+                            {{ season.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+                {% if divisions %}
+                <select name="division_id" class="form-select" onchange="this.form.submit()">
+                    {% for division in divisions %}
+                        <option value="{{ division.id }}" {% if selected_division and selected_division.id == division.id %}selected{% endif %}>
+                            {{ division.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="view-selector">
+        <button type="button" class="active" onclick="switchView('stats')">Stats</button>
+        <button type="button" onclick="switchView('form')">Form</button>
+    </div>
+
+    {% if standings %}
+    <div class="table-container">
+        <table class="table-modern stats-view">
+            <thead>
+                <tr>
+                    <th style="width: 40%">Team</th>
+                    <th class="text-center">P</th>
+                    <th class="text-center hide-mobile hide-form">W</th>
+                    <th class="text-center hide-mobile hide-form">D</th>
+                    <th class="text-center hide-mobile hide-form">L</th>
+                    <th class="text-center hide-stats">Form</th>
+                    <th class="text-center hide-form">PF</th>
+                    <th class="text-center">Pts</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set max_score = standings|map(attribute='total_score')|max %}
+                {% set teams_with_max_score = standings|selectattr('total_score', 'equalto', max_score)|list|length %}
+                {% for standing in standings %}
+                <tr>
+                    <td>
+                        <div class="team-cell">
+                            {% set is_first = loop.index == 1 %}
+                            {% set is_second = loop.index == 2 %}
+                            {% set is_relegation = loop.index >= 11 %}
+                            {% set is_top_scorer = standing.total_score == max_score and max_score > 0 and teams_with_max_score == 1 %}
+                            
+                            {% if is_first and is_top_scorer %}
+                                {% set position_class = "position-first-and-top-scorer" %}
+                            {% elif is_second and is_top_scorer %}
+                                {% set position_class = "position-second-and-top-scorer" %}
+                            {% elif is_relegation and is_top_scorer %}
+                                {% set position_class = "position-relegation-and-top-scorer" %}
+                            {% elif is_first %}
+                                {% set position_class = "position-first" %}
+                            {% elif is_second %}
+                                {% set position_class = "position-second" %}
+                            {% elif is_relegation %}
+                                {% set position_class = "position-relegation" %}
+                            {% elif is_top_scorer %}
+                                {% set position_class = "position-top-scorer" %}
+                            {% else %}
+                                {% set position_class = "position-normal" %}
+                            {% endif %}
+                            
+                            <div class="position {{ position_class }}">
+                                {{ loop.index }}
+                            </div>
+                            <a href="{{ url_for('main.team_profile', team_id=standing.team.id) }}" class="team-name">
+                                {{ standing.team.name }}
+                            </a>
+                        </div>
+                    </td>
+                    <td class="text-center">{{ standing.played_matches }}</td>
+                    <td class="text-center hide-mobile hide-form">{{ standing.wins }}</td>
+                    <td class="text-center hide-mobile hide-form">{{ standing.draws }}</td>
+                    <td class="text-center hide-mobile hide-form">{{ standing.losses }}</td>
+                    <td class="text-center hide-stats">
+                        {% for result in standing.recent_form[-5:]|reverse %}
+                            <span class="form-indicator form-{{ result }}">{{ result }}</span>
+                        {% endfor %}
+                    </td>
+                    <td class="text-center hide-form">{{ "%.2f"|format(standing.total_score) }}</td>
+                    <td class="text-center"><strong>{{ standing.points }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="table-legend">
+            <div class="legend-item"><span class="legend-circle gold"></span>Champion</div>
+            <div class="legend-item"><span class="legend-circle blue"></span>Runner Up</div>
+            <div class="legend-item"><span class="legend-circle purple"></span>Most Points For</div>
+            <div class="legend-item"><span class="legend-circle red"></span>Relegation</div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        {% if not selected_season %}
+            Please select a season to view the league table.
+        {% elif not selected_division %}
+            Please select a division to view the league table.
+        {% else %}
+            No standings available for the selected division.
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function switchView(view) {
+    const table = document.querySelector('.table-modern');
+    const buttons = document.querySelectorAll('.view-selector button');
+    
+    buttons.forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`button[onclick="switchView('${view}')"]`).classList.add('active');
+    
+    if (view === 'stats') {
+        table.classList.remove('form-view');
+        table.classList.add('stats-view');
+    } else {
+        table.classList.remove('stats-view');
+        table.classList.add('form-view');
+    }
+}
+</script>
+{% endblock %} 

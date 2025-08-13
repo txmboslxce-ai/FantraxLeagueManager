@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Modern mobile-first styles */
+    .table-container {
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .division-header {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .division-header h5 {
+        margin: 0;
+        color: #2c3e50;
+        font-weight: 600;
+    }
+    
+    .division-header small {
+        font-weight: 500;
+    }
+    
+    .view-selector {
+        background: #f8f9fa;
+        padding: 0.5rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .view-selector button {
+        flex: 1;
+        padding: 0.5rem;
+        border: none;
+        background: transparent;
+        color: #666;
+        font-weight: 500;
+    }
+    
+    .view-selector button.active {
+        background: #fff;
+        color: #000;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .table-modern {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.875rem;
+    }
+
+    .table-modern thead th {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        font-weight: 600;
+        font-size: 0.875rem;
+        padding: 0.75rem 0.5rem;
+        color: #495057;
+    }
+
+    .table-modern tbody tr {
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .table-modern tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    .table-modern td {
+        padding: 0.75rem 0.5rem;
+        vertical-align: middle;
+    }
+
+    .team-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .team-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .position-indicator {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .position-indicator.first-place {
+        background-color: #198754;
+    }
+
+    .position-indicator.other-place {
+        background-color: #6c757d;
+    }
+
+    .trophy-winner {
+        width: 20px;
+        height: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    .team-name {
+        font-weight: 500;
+        color: #212529;
+        text-decoration: none;
+        font-size: 0.875rem;
+        line-height: 1.2;
+        display: block;
+    }
+
+    .team-name:hover {
+        color: #0d6efd;
+        text-decoration: underline;
+    }
+
+    .manager-name {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 0.125rem;
+    }
+
+    .division-name {
+        font-size: 0.75rem;
+        color: #999;
+    }
+
+    /* Stats view specific styles */
+    .stats-view .hide-stats {
+        display: none;
+    }
+
+    /* Form view specific styles */
+    .form-view .hide-form {
+        display: none;
+    }
+
+    .form-indicator {
+        width: 20px;
+        height: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 0.7rem;
+        font-weight: 500;
+        margin: 0 1px;
+    }
+
+    .form-W {
+        background: #00b300;
+        color: white;
+    }
+
+    .form-D {
+        background: #666;
+        color: white;
+    }
+
+    .form-L {
+        background: #ff0000;
+        color: white;
+    }
+
+    .month-header {
+        font-size: 1.25rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .month-info {
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .table-modern td, 
+        .table-modern th {
+            padding: 0.5rem 0.25rem;
+            font-size: 0.8rem;
+        }
+
+        .position-indicator {
+            width: 18px;
+            height: 18px;
+            font-size: 0.7rem;
+        }
+
+        .team-name {
+            font-size: 0.8rem;
+        }
+
+        .manager-name {
+            font-size: 0.7rem;
+        }
+
+        .hide-mobile {
+            display: none !important;
+        }
+    }
+</style>
+
+<div class="container">
+    <h1 class="month-header">Manager of the Month</h1>
+
+    {% if season %}
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <form method="GET" id="monthForm">
+                <select name="month_id" class="form-select" onchange="submitForm()">
+                    <option value="">Select Month</option>
+                    {% for m in months|sort(attribute='start_gameweek.number', reverse=true) %}
+                        <option value="{{ m.id }}" {% if selected_month and selected_month.id == m.id %}selected{% endif %}>
+                            {{ m.name }} - {{ season.name }}{% if not m.has_fixtures %} (In Progress){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+                {% if selected_division_id %}
+                    <input type="hidden" name="division_id" value="{{ selected_division_id }}">
+                {% endif %}
+            </form>
+        </div>
+        <div class="col-md-4">
+            <form method="GET" id="divisionForm">
+                <select name="division_id" class="form-select" onchange="submitDivisionForm()">
+                    {% for division in divisions %}
+                        <option value="{{ division.id }}" {% if selected_division_id == division.id %}selected{% endif %}>
+                            {{ division.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+                {% if selected_month %}
+                    <input type="hidden" name="month_id" value="{{ selected_month.id }}">
+                {% endif %}
+            </form>
+        </div>
+        <div class="col-md-4">
+            <a href="{{ url_for('main.motm_winners') }}" class="btn btn-outline-primary w-100">
+                <i class="fas fa-trophy me-2"></i>Previous Winners
+            </a>
+        </div>
+    </div>
+
+    {% if selected_month and selected_division_id %}
+    {% set selected_division = divisions|selectattr('id', 'eq', selected_division_id)|first %}
+    {% set standings = selected_month.get_standings(selected_division_id) %}
+    
+    {% if standings %}
+    <div class="month-info">
+        <strong>{{ selected_division.name }}</strong> - 
+        Gameweeks {{ selected_month.start_gameweek.number }} - {{ selected_month.end_gameweek.number }}
+        {% if not selected_month.has_fixtures %}(In Progress){% endif %}
+    </div>
+
+    <div class="view-selector">
+        <button type="button" class="active" onclick="switchView('stats')">Stats</button>
+        <button type="button" onclick="switchView('form')">Form</button>
+    </div>
+
+    <div class="table-container">
+        <table class="table-modern stats-view">
+            <thead>
+                <tr>
+                    <th style="width: 45%">Team</th>
+                    <th class="text-center">P</th>
+                    <th class="text-center hide-mobile hide-form">W</th>
+                    <th class="text-center hide-mobile hide-form">D</th>
+                    <th class="text-center hide-mobile hide-form">L</th>
+                    <th class="text-center hide-stats">Form</th>
+                    <th class="text-center hide-form">PF</th>
+                    <th class="text-center">Pts</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for standing in standings %}
+                <tr>
+                    <td>
+                        <div class="team-cell">
+                            {% if loop.index == 1 %}
+                                {% if selected_month.has_fixtures %}
+                                    <div class="trophy-winner">🏆</div>
+                                {% else %}
+                                    <div class="position-indicator first-place">{{ loop.index }}</div>
+                                {% endif %}
+                            {% else %}
+                                <div class="position-indicator other-place">{{ loop.index }}</div>
+                            {% endif %}
+                            <div class="team-info">
+                                <a href="{{ url_for('main.team_profile', team_id=standing.team.id) }}" class="team-name">
+                                    {{ standing.team.name }}
+                                </a>
+                                <span class="manager-name">{{ standing.team.manager_name }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-center">{{ standing.played }}</td>
+                    <td class="text-center hide-mobile hide-form">{{ standing.wins }}</td>
+                    <td class="text-center hide-mobile hide-form">{{ standing.draws }}</td>
+                    <td class="text-center hide-mobile hide-form">{{ standing.losses }}</td>
+                    <td class="text-center hide-stats">
+                        {% set month_fixtures = [] %}
+                        {% for fixture in standing.team.home_fixtures %}
+                            {% if fixture.gameweek.number >= selected_month.start_gameweek.number and fixture.gameweek.number <= selected_month.end_gameweek.number and fixture.home_score is not none and fixture.division_id == selected_division_id %}
+                                {% set _ = month_fixtures.append({'fixture': fixture, 'is_home': true, 'gameweek': fixture.gameweek.number}) %}
+                            {% endif %}
+                        {% endfor %}
+                        {% for fixture in standing.team.away_fixtures %}
+                            {% if fixture.gameweek.number >= selected_month.start_gameweek.number and fixture.gameweek.number <= selected_month.end_gameweek.number and fixture.home_score is not none and fixture.division_id == selected_division_id %}
+                                {% set _ = month_fixtures.append({'fixture': fixture, 'is_home': false, 'gameweek': fixture.gameweek.number}) %}
+                            {% endif %}
+                        {% endfor %}
+                        {% set sorted_fixtures = month_fixtures|sort(attribute='gameweek') %}
+                        {% for f in sorted_fixtures %}
+                            {% if f.is_home %}
+                                {% if f.fixture.home_score > f.fixture.away_score %}
+                                    <span class="form-indicator form-W">W</span>
+                                {% elif f.fixture.home_score < f.fixture.away_score %}
+                                    <span class="form-indicator form-L">L</span>
+                                {% else %}
+                                    <span class="form-indicator form-D">D</span>
+                                {% endif %}
+                            {% else %}
+                                {% if f.fixture.away_score > f.fixture.home_score %}
+                                    <span class="form-indicator form-W">W</span>
+                                {% elif f.fixture.away_score < f.fixture.home_score %}
+                                    <span class="form-indicator form-L">L</span>
+                                {% else %}
+                                    <span class="form-indicator form-D">D</span>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    </td>
+                    <td class="text-center hide-form">{{ "%.2f"|format(standing.goals_for) }}</td>
+                    <td class="text-center"><strong>{{ standing.points }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% endif %}
+    {% else %}
+    <div class="alert alert-info">
+        <p class="mb-0">No active season found. Please contact the administrator to set up a new season.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function submitForm() {
+    document.getElementById('monthForm').submit();
+}
+
+function submitDivisionForm() {
+    document.getElementById('divisionForm').submit();
+}
+
+function switchView(view) {
+    const tables = document.querySelectorAll('.table-modern');
+    const buttons = document.querySelectorAll('.view-selector button');
+    
+    buttons.forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`button[onclick="switchView('${view}')"]`).classList.add('active');
+    
+    tables.forEach(table => {
+        if (view === 'stats') {
+            table.classList.remove('form-view');
+            table.classList.add('stats-view');
+        } else {
+            table.classList.remove('stats-view');
+            table.classList.add('form-view');
+        }
+    });
+}
+</script>
+{% endblock %} 

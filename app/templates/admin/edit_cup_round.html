@@ -1,0 +1,26 @@
+from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask_login import login_required, current_user
+from app.models import CupRound, Team, TeamSeason, Season
+from app.admin.forms import CupMatchForm
+
+admin_bp = Blueprint('admin', __name__)
+
+@admin_bp.route('/admin/cup_matches/<int:cup_round_id>', methods=['GET', 'POST'])
+@login_required
+def manage_cup_matches(cup_round_id):
+    cup_round = CupRound.query.get_or_404(cup_round_id)
+    current_season = Season.query.filter_by(current=True).first()
+    form = CupMatchForm()
+
+    if current_season:
+        # Always list all teams alphabetically for manual pairing
+        teams = Team.query \
+                    .join(TeamSeason) \
+                    .filter(TeamSeason.season_id == current_season.id) \
+                    .all()
+        teams = sorted(teams, key=lambda t: t.name)
+
+    form.home_team_id.choices = [(team.id, team.name) for team in teams]
+    form.away_team_id.choices = [(team.id, team.name) for team in teams]
+
+    # ... rest of the function ...

@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">Admin Dashboard</h1>
+
+<div class="row">
+    <!-- Season Management -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h2 class="h4 mb-0">Season Management</h2>
+            </div>
+            <div class="card-body">
+                {% if season %}
+                    <p class="mb-3">Current Season: <strong>{{ season.name }}</strong></p>
+                {% else %}
+                    <p class="mb-3 text-warning">No active season!</p>
+                {% endif %}
+                <div class="list-group">
+                    <a href="{{ url_for('admin.manage_seasons') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-calendar-alt me-2"></i> Manage Seasons
+                    </a>
+                    {% if season %}
+                        <a href="{{ url_for('admin.end_season') }}" class="list-group-item list-group-item-action text-danger">
+                            <i class="fas fa-flag-checkered me-2"></i> End Current Season
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- League Management -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h2 class="h4 mb-0">League Management</h2>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{{ url_for('admin.manage_divisions') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-layer-group me-2"></i> Manage Divisions
+                    </a>
+                    <a href="{{ url_for('admin.manage_teams') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-users me-2"></i> Manage Teams
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fixtures & Results -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h2 class="h4 mb-0">Fixtures & Results</h2>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{{ url_for('admin.manage_fixtures') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-calendar me-2"></i> Manage Fixtures
+                    </a>
+                    <a href="{{ url_for('admin.upload_scores') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-upload me-2"></i> Upload Scores
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cup Management -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h2 class="h4 mb-0">Cup Management</h2>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{{ url_for('admin.manage_cups') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-trophy me-2"></i> Manage Cup Competitions
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manager of the Month -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h2 class="h4 mb-0">Manager of the Month</h2>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{{ url_for('admin.manage_manager_month') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-award me-2"></i> Manage Manager of the Month
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Management -->
+    <div class="col-md-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <h2 class="h4 mb-0">Rules Management</h2>
+        </div>
+        <div class="card-body">
+          <div class="list-group">
+            <a href="{{ url_for('admin.edit_rules') }}" class="list-group-item list-group-item-action">
+              <i class="fas fa-file-alt me-2"></i> Edit Rules
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+{% endblock %}
