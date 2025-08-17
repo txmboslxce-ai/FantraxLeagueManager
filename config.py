@@ -18,6 +18,10 @@ class Config:
     else:
         db_url = 'sqlite:///' + os.path.join(basedir, 'fantasy_league.db')
     
+    # Remove any SSL parameters from the URL as they'll be handled in engine options
+    if '?' in db_url:
+        db_url = db_url.split('?')[0]
+    
     SQLALCHEMY_DATABASE_URI = db_url
     
     print(f"Using database URL: {SQLALCHEMY_DATABASE_URI}")
@@ -28,6 +32,10 @@ class Config:
         'max_overflow': 2,
         'pool_timeout': 30,
         'pool_recycle': 1800,
+        'connect_args': {
+            'ssl': True,
+            'ssl_context': True,
+        },
     }
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=60)
 
