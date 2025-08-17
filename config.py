@@ -33,8 +33,7 @@ class Config:
         'pool_timeout': 30,
         'pool_recycle': 1800,
         'connect_args': {
-            'ssl': True,
-            'ssl_context': True,
+            'ssl_context': True
         },
     }
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=60)
