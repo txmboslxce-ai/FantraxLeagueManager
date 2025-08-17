@@ -3,8 +3,10 @@ services:
     name: fantrax-league-manager
     env: python
     plan: free
-    runtime: python3.11
-    buildCommand: pyenv install 3.11.4 && pyenv global 3.11.4 && python -m pip install --upgrade pip && pip install -r requirements.txt && python -m flask db upgrade
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.4
+    buildCommand: pip install -r requirements.txt && python -m flask db upgrade
     startCommand: gunicorn wsgi:app
     envVars:
       - key: FLASK_APP
