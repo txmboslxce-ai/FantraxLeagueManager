@@ -23,8 +23,33 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
     
+    # Debug logging
+    app.logger.info(f"DATABASE_URL from env: {os.environ.get('DATABASE_URL')}")
+    app.logger.info(f"SQLALCHEMY_DATABASE_URI: {app.config.get('SQLALCHEMY_DATABASE_URI')}")
+    
     # Initialize extensions
     db.init_app(app)
+    
+    # Test database connection
+    with app.app_context():
+        try:
+            # Print configuration for debugging
+            print("Database Configuration:")
+            print(f"- DATABASE_URL: {os.environ.get('DATABASE_URL')}")
+            print(f"- SQLALCHEMY_DATABASE_URI: {app.config.get('SQLALCHEMY_DATABASE_URI')}")
+            print(f"- SQLALCHEMY_ENGINE_OPTIONS: {app.config.get('SQLALCHEMY_ENGINE_OPTIONS')}")
+            
+            # Test connection
+            conn = db.engine.connect()
+            # Try a simple query
+            result = conn.execute("SELECT 1").scalar()
+            print(f"Database connection successful! Test query result: {result}")
+            conn.close()
+        except Exception as e:
+            print(f"Database connection failed: {str(e)}")
+            print(f"Error type: {type(e).__name__}")
+            raise  # Re-raise the exception for proper error handling
+            
     migrate.init_app(app, db)
     login_manager.init_app(app)
     bootstrap.init_app(app)
