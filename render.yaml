@@ -3,10 +3,20 @@ services:
     name: fantrax-league-manager
     env: python
     plan: free
-    envVars:
+    env:
       - key: PYTHON_VERSION
-        value: 3.11.4
-    buildCommand: pip install -r requirements.txt && python -m flask db upgrade
+        value: "3.11.4"
+      - key: PATH
+        value: "/opt/render/.local/python/3.11.4/bin:${PATH}"
+    buildCommand: |
+      curl https://pyenv.run | bash
+      export PATH="$HOME/.pyenv/bin:$PATH"
+      eval "$(pyenv init -)"
+      pyenv install 3.11.4
+      pyenv global 3.11.4
+      python -V
+      pip install -r requirements.txt 
+      python -m flask db upgrade
     startCommand: gunicorn wsgi:app
     envVars:
       - key: FLASK_APP
