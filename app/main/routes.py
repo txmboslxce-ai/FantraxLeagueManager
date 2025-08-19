@@ -446,13 +446,15 @@ def cups():
     view_type = request.args.get('view', 'group_stage')
     
     if selected_season:
-        # Find any cup for the season (remove hardcoded name)
-        cup = CupCompetition.query.filter_by(season_id=selected_season.id).first()
+        # Find cups for the season
+        cups = CupCompetition.query.filter_by(season_id=selected_season.id).all()
         
         # Debug logging
         print(f"Looking for cups in season {selected_season.name} (ID: {selected_season.id})")
-        all_cups = CupCompetition.query.all()
-        print(f"All cups in database: {[f'{c.id}: {c.season_id}' for c in all_cups]}")
+        print(f"Found {len(cups)} cups for this season")
+
+        # Use the first cup found (we typically only have one per season)
+        cup = cups[0] if cups else None
 
         if cup:
             # Auto-switch to knockout view for previous seasons without groups
@@ -630,6 +632,15 @@ def motm_winners():
                          seasons=seasons,
                          selected_season=selected_season)
 
+def get_team_titles(team_id):
+    """Get all titles for a team across all seasons."""
+    titles = Title.query.filter_by(team_id=team_id).join(Season).order_by(Season.start_date.desc()).all()
+    return {
+        'league': [t for t in titles if t.type == 'league' and not t.is_runner_up],
+        'cup': [t for t in titles if t.type == 'cup' and not t.is_runner_up],
+        'runners_up': [t for t in titles if t.is_runner_up]
+    }
+
 @bp.route('/team/<int:team_id>')
 def team_profile(team_id):
     from app.models import CupCompetition, CupRound, Title
@@ -639,10 +650,17 @@ def team_profile(team_id):
     # Debug logging for team profile
     print(f"\nLoading profile for team {team.name} (ID: {team.id})")
 
-    # We'll initialize empty lists here in case there's no current season
-    league_titles = []
-    cup_titles   = []
-    runners_up   = []
+    # Get all titles for this team
+    titles = get_team_titles(team_id)
+    league_titles = titles['league']
+    cup_titles = titles['cup']
+    runners_up = titles['runners_up']
+
+    print(f"Found titles for team {team.name}:")
+    print(f"- League titles: {len(league_titles)}")
+    print(f"- Cup titles: {len(cup_titles)}")
+    print(f"- Runner-up positions: {len(runners_up)}")
+
     team_season = None
     
     # Debug - check all titles

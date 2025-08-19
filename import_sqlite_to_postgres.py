@@ -1,9 +1,4 @@
-"""
-This script is deprecated and not needed for Render deployment.
-Your app will use the bundled fantasy_league.db SQLite file directly.
-No Postgres import required.
-"""
-pass
+# This script is active and required for data migration
 """One-time (idempotent) import of local SQLite snapshot into the Postgres DATABASE_URL.
 
 Behavior:
