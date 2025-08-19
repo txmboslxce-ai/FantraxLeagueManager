@@ -31,6 +31,36 @@ def log(msg):
     print(f"[import_sqlite] {msg}")
 
 
+def import_table(source_conn, target_conn, table_name):
+    """Import data from a single table."""
+    try:
+        # Get data from source
+        result = source_conn.execute(text(f'SELECT * FROM {table_name}'))
+        rows = result.fetchall()
+        if not rows:
+            log(f"No data found in table {table_name}")
+            return 0
+            
+        # Get column names
+        columns = result.keys()
+        
+        # Generate insert statement
+        column_list = ', '.join(columns)
+        value_list = ', '.join([':' + col for col in columns])
+        insert_stmt = f'INSERT INTO {table_name} ({column_list}) VALUES ({value_list})'
+        
+        # Convert rows to dictionaries
+        row_dicts = [dict(zip(columns, row)) for row in rows]
+        
+        # Insert data
+        for row in row_dicts:
+            target_conn.execute(text(insert_stmt), row)
+            
+        return len(rows)
+    except Exception as e:
+        log(f"Error importing table {table_name}: {str(e)}")
+        raise
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Import SQLite snapshot into Postgres")
     parser.add_argument('--run', action='store_true', help='Run even if AUTO_IMPORT not set')
@@ -40,7 +70,8 @@ def main(argv=None):
 
     log(f"Started import script (manual_run={args.run}, force={args.force}, truncate={args.truncate})")
 
-    if not should_run(args.run):
+    # Always run when --force is specified
+    if not args.force and not should_run(args.run):
         log("AUTO_IMPORT disabled and --run not provided; skipping.")
         return
 
@@ -66,30 +97,53 @@ def main(argv=None):
         if has_data and not force:
             log("Target already has data; skipping import (use FORCE_IMPORT=true, --force, or truncate).")
             return
-        if has_data and force:
-            log("FORCE import enabled; proceeding to re-seed (this may duplicate rows unless --truncate).")
-
+        log("Setting up database connections...")
         sqlite_path = os.path.join(os.path.dirname(__file__), 'fantasy_league.db')
         if not os.path.exists(sqlite_path):
             log("Local fantasy_league.db not found; nothing to import.")
             return
 
         source_engine = create_engine(f'sqlite:///{sqlite_path}')
-        source_meta = MetaData()
-        source_meta.reflect(bind=source_engine)
-
-        target_meta = MetaData()
-        target_meta.reflect(bind=target_engine)
-
         source_conn = source_engine.connect()
         target_conn = target_engine.connect()
-        trans = target_conn.begin()
+        
         try:
-            # Try relaxing constraints for faster load (Postgres only)
-            try:
-                target_conn.execute(text('SET session_replication_role = replica;'))
-            except Exception:
-                pass
+            # Disable foreign key checks and enter maintenance mode
+            target_conn.execute(text('SET session_replication_role = replica;'))
+            
+            # Always truncate when force is specified
+            if args.force:
+                log("Force mode enabled. Truncating all tables...")
+                tables = [
+                    'title', 'cup_group_match', 'cup_group', 'cup_round',
+                    'cup_competition', 'fixture', 'manager_of_the_month',
+                    'team_season', 'gameweek', 'division', 'team', 'season'
+                ]
+                for table in tables:
+                    target_conn.execute(text(f'TRUNCATE TABLE {table} CASCADE;'))
+                log("Tables truncated successfully.")
+            
+            # Import tables in correct order
+            tables = [
+                'season',
+                'division',
+                'team',
+                'team_season',
+                'gameweek',
+                'cup_competition',
+                'cup_round',
+                'cup_group',
+                'cup_group_match',
+                'title',
+                'manager_of_the_month',
+                'fixture'
+            ]
+            
+            for table in tables:
+                log(f"Importing table: {table}")
+                count = import_table(source_conn, target_conn, table)
+                log(f"Imported {count} rows into {table}")
+                target_conn.execute(text('COMMIT;'))  # Commit after each table
 
             if has_data and force and args.truncate:
                 # Truncate all target tables we will populate (simple order: reverse dependency not handled; rely on CASCADE)
