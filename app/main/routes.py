@@ -5,6 +5,24 @@ from app import db
 from sqlalchemy import or_
 import markdown
 from datetime import datetime, date
+from flask import jsonify
+
+@bp.route('/api/test-db')
+def test_db():
+    """Test database connection and return status."""
+    try:
+        # Try to query the seasons table
+        season_count = Season.query.count()
+        return jsonify({
+            'status': 'success',
+            'message': 'Database connection successful',
+            'season_count': season_count
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 def _initialize_database():
     """Initialize database with full league data if empty."""
@@ -181,7 +199,10 @@ def create_admin():
 @bp.route('/league_tables/<int:season_id>')
 @bp.route('/league_tables/<int:season_id>/<int:division_id>')
 def league_tables(season_id=None, division_id=None):
-    # Check form parameters first
+    try:
+        from flask import current_app
+        current_app.logger.info(f"Database URL: {current_app.config['SQLALCHEMY_DATABASE_URI']}")
+        # Check form parameters first
     form_season_id = request.args.get('season_id', type=int)
     form_division_id = request.args.get('division_id', type=int)
     
@@ -424,6 +445,11 @@ def cups():
         # Find any cup for the season (remove hardcoded name)
         cup = CupCompetition.query.filter_by(season_id=selected_season.id).first()
         
+        # Debug logging
+        print(f"Looking for cups in season {selected_season.name} (ID: {selected_season.id})")
+        all_cups = CupCompetition.query.all()
+        print(f"All cups in database: {[f'{c.id}: {c.season_id}' for c in all_cups]}")
+
         if cup:
             # Auto-switch to knockout view for previous seasons without groups
             if not cup.has_groups and view_type == 'group_stage' and not selected_season.is_current:
@@ -606,11 +632,18 @@ def team_profile(team_id):
 
     team = Team.query.get_or_404(team_id)
 
+    # Debug logging for team profile
+    print(f"\nLoading profile for team {team.name} (ID: {team.id})")
+
     # We'll initialize empty lists here in case there's no current season
     league_titles = []
     cup_titles   = []
     runners_up   = []
     team_season = None
+    
+    # Debug - check all titles
+    all_titles = Title.query.all()
+    print(f"All titles in database: {[f'{t.id}: {t.team_id} - {t.type}' for t in all_titles]}")
 
     current_season = Season.query.filter_by(is_current=True).first()
     if current_season:
