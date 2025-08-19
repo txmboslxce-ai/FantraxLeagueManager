@@ -10,32 +10,37 @@ class Config:
     db_url = os.environ.get('DATABASE_URL')
     
     if db_url:
-        # Replace postgresql:// with postgresql+pg8000:// for the pg8000 driver
-        if db_url.startswith('postgresql://'):
-            db_url = db_url.replace('postgresql://', 'postgresql+pg8000://', 1)
-        elif db_url.startswith('postgres://'):
-            db_url = db_url.replace('postgres://', 'postgresql+pg8000://', 1)
+        # Handle Heroku-style postgresql:// URLs
+        if db_url.startswith('postgres://'):
+            db_url = db_url.replace('postgres://', 'postgresql://', 1)
     else:
         db_url = 'sqlite:///' + os.path.join(basedir, 'fantasy_league.db')
-    
-    # Remove any SSL parameters from the URL as they'll be handled in engine options
-    if '?' in db_url:
-        db_url = db_url.split('?')[0]
     
     SQLALCHEMY_DATABASE_URI = db_url
     
     print(f"Using database URL: {SQLALCHEMY_DATABASE_URI}")
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 5,
-        'max_overflow': 2,
-        'pool_timeout': 30,
-        'pool_recycle': 1800,
-        'connect_args': {
-            'ssl_context': True
-        },
-    }
+    
+    # Only add SSL options for PostgreSQL connections
+    if 'postgresql' in db_url:
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_size': 5,
+            'max_overflow': 2,
+            'pool_timeout': 30,
+            'pool_recycle': 1800,
+            'connect_args': {
+                'ssl': True,
+                'ssl_context': True
+            }
+        }
+    else:
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_size': 5,
+            'max_overflow': 2,
+            'pool_timeout': 30,
+            'pool_recycle': 1800
+        }
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=60)
 
 class DevelopmentConfig(Config):
