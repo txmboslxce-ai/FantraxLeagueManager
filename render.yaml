@@ -5,17 +5,8 @@ services:
     plan: free
     env:
       - key: PYTHON_VERSION
-        value: "3.11.4"
-      - key: PATH
-        value: "/opt/render/.local/python/3.11.4/bin:${PATH}"
-    buildCommand: |
-      curl https://pyenv.run | bash
-      export PATH="$HOME/.pyenv/bin:$PATH"
-      eval "$(pyenv init -)"
-      pyenv install 3.11.4
-      pyenv global 3.11.4
-      python -V
-      pip install -r requirements.txt 
+        value: "3.11.0"
+    buildCommand: pip install -r requirements.txt
       python -m flask db upgrade
       export FLASK_APP=wsgi.py
       chmod +x direct_import.py
