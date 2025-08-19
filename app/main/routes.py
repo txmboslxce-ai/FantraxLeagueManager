@@ -202,22 +202,26 @@ def league_tables(season_id=None, division_id=None):
     try:
         from flask import current_app
         current_app.logger.info(f"Database URL: {current_app.config['SQLALCHEMY_DATABASE_URI']}")
+        
         # Check form parameters first
-    form_season_id = request.args.get('season_id', type=int)
-    form_division_id = request.args.get('division_id', type=int)
-    
-    # Form parameters take precedence over URL parameters
-    if form_season_id is not None:
-        return redirect(url_for('main.league_tables', 
-                              season_id=form_season_id,
-                              division_id=form_division_id))
-    
-    # Get all seasons for the dropdown, most recent first
-    all_seasons = Season.query.order_by(Season.start_date.desc()).all()
-    
-    # Get current season if no season_id provided
-    if season_id is None:
-        current_season = Season.query.filter_by(is_current=True).first()
+        form_season_id = request.args.get('season_id', type=int)
+        form_division_id = request.args.get('division_id', type=int)
+        
+        # Form parameters take precedence over URL parameters
+        if form_season_id is not None:
+            return redirect(url_for('main.league_tables', 
+                                  season_id=form_season_id,
+                                  division_id=form_division_id))
+        
+        # Get all seasons for the dropdown, most recent first
+        all_seasons = Season.query.order_by(Season.start_date.desc()).all()
+        
+        # Get current season if no season_id provided
+        if season_id is None:
+            current_season = Season.query.filter_by(is_current=True).first()
+    except Exception as e:
+        current_app.logger.error(f"Error in league_tables: {str(e)}")
+        return render_template('error.html', error="Error loading league tables")
         if current_season:
             return redirect(url_for('main.league_tables', season_id=current_season.id))
         elif all_seasons:
