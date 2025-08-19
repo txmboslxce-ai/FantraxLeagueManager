@@ -18,10 +18,8 @@ services:
       pip install -r requirements.txt 
       python -m flask db upgrade
       export FLASK_APP=wsgi.py
-      export FORCE_IMPORT=true
-      python import_sqlite_to_postgres.py --force --run --truncate
-      sleep 5  # Give the database time to process
-      python init_production_db.py
+      chmod +x direct_import.py
+      python direct_import.py
     startCommand: gunicorn wsgi:app
     envVars:
       - key: FLASK_APP
