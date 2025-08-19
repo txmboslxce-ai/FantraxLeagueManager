@@ -7,14 +7,11 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-key-please-change-in-production'
     
     # Get database URL from environment
-    db_url = os.environ.get('DATABASE_URL')
+    db_url = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'fantasy_league.db'))
     
-    if db_url:
-        # Handle Heroku-style postgresql:// URLs
-        if db_url.startswith('postgres://'):
-            db_url = db_url.replace('postgres://', 'postgresql://', 1)
-    else:
-        db_url = 'sqlite:///' + os.path.join(basedir, 'fantasy_league.db')
+    # Handle Heroku/Render-style postgres:// URLs
+    if db_url.startswith('postgres://'):
+        db_url = db_url.replace('postgres://', 'postgresql://', 1)
     
     SQLALCHEMY_DATABASE_URI = db_url
     

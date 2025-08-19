@@ -3,10 +3,10 @@ services:
     name: fantrax-league-manager
     env: python
     plan: free
-    env:
-      - key: PYTHON_VERSION
-        value: "3.11.0"
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      apt-get update && apt-get install -y python3-dev libpq-dev
+      pip install --upgrade pip
+      pip install -r requirements.txt
       python -m flask db upgrade
       export FLASK_APP=wsgi.py
       chmod +x direct_import.py
