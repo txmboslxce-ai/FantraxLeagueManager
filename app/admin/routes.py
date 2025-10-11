@@ -243,6 +243,16 @@ def manage_fixtures():
         form.division_id.choices = [(d.id, d.name) for d in divisions]
         
         if form.validate_on_submit():
+            if not form.division_id.data:
+                flash('Please select a division', 'danger')
+                return redirect(url_for('admin.manage_fixtures'))
+
+            # Validate division exists
+            division = Division.query.get(form.division_id.data)
+            if not division:
+                flash('Selected division does not exist', 'danger')
+                return redirect(url_for('admin.manage_fixtures'))
+
             success_count = 0
             error_count = 0
             fixtures_text = form.fixtures_text.data.strip().split('\n')
@@ -315,14 +325,26 @@ def manage_fixtures():
                             error_count += 1
                             continue
 
-                        fixture = Fixture(
-                            gameweek_id=gameweek.id,
-                            home_team_id=home_team.id,
-                            away_team_id=away_team.id,
-                            division_id=form.division_id.data
-                        )
-                        db.session.add(fixture)
-                        success_count += 1
+                        # Add debug logging
+                        current_app.logger.info(f'Creating fixture: GW={gameweek.id}, Home={home_team.id}, Away={away_team.id}, Div={form.division_id.data}')
+                        
+                        try:
+                            fixture = Fixture(
+                                gameweek_id=gameweek.id,
+                                home_team_id=home_team.id,
+                                away_team_id=away_team.id,
+                                division_id=form.division_id.data
+                            )
+                            db.session.add(fixture)
+                            db.session.flush()  # Try to flush to catch any database errors early
+                            success_count += 1
+                        except Exception as e:
+                            error_msg = f'Error creating fixture: {str(e)}'
+                            current_app.logger.error(error_msg)
+                            db.session.rollback()
+                            flash(error_msg, 'danger')
+                            error_count += 1
+                            continue
                         
                     except ValueError as ve:
                         error_msg = f'Invalid gameweek number in line: {fixture_line}'
@@ -355,44 +377,6 @@ def manage_fixtures():
     
     return render_template('admin/fixtures.html', title='Manage Fixtures',
                          form=form, fixtures=fixtures)
-    
-    if not current_season:
-        flash('No current season found. Please create a season first.', 'warning')
-        return redirect(url_for('admin.manage_seasons'))
-
-    try:
-        # Get divisions for the form
-        divisions = Division.query.filter_by(season_id=current_season.id).all()
-        if not divisions:
-            flash('No divisions found for the current season. Please create a division first.', 'warning')
-            return redirect(url_for('admin.manage_divisions'))
-            
-        form.division_id.choices = [(d.id, d.name) for d in divisions]
-        
-        if form.validate_on_submit():
-            success_count = 0
-            error_count = 0
-            fixtures_text = form.fixtures_text.data.strip().split('\n')
-            
-            # Verify gameweeks exist for the current season
-            existing_gameweeks = {gw.number: gw for gw in Gameweek.query.filter_by(season_id=current_season.id).all()}
-            if not existing_gameweeks:
-                flash('No gameweeks found for the current season.', 'danger')
-                return redirect(url_for('admin.manage_fixtures'))
-                
-            # Get all teams once for faster lookup
-            all_teams = {normalize_team_name(team.name): team for team in Team.query.all()}
-            
-            for fixture_line in fixtures_text:
-                if not fixture_line.strip():  # Skip empty lines
-                    continue
-                    
-                parts = [p.strip() for p in fixture_line.split('\t') if p.strip()]
-                if len(parts) == 3:  # Ensure we have gameweek, home team, and away team
-                    try:
-                        gameweek_number = int(parts[0])
-                        home_team_name = normalize_team_name(parts[1])
-                        away_team_name = normalize_team_name(parts[2])
                         
                         # Try to find teams (names should already be normalized in the database)
                         home_team = all_teams.get(home_team_name)

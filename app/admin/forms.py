@@ -19,10 +19,14 @@ class EditTeamForm(FlaskForm):
     submit = SubmitField('Update Team')
 
 class BulkFixtureForm(FlaskForm):
-    division_id = SelectField('Division', coerce=int, validators=[DataRequired()])
+    division_id = SelectField('Division', coerce=int, validators=[DataRequired(message="Please select a division")])
     fixtures_text = TextAreaField('Fixtures (Format: Gameweek[tab]Home Team[tab]Away Team - one per line)', 
-                                validators=[DataRequired()])
+                                validators=[DataRequired(message="Please enter fixture data")])
     submit = SubmitField('Create Fixtures')
+    
+    def validate_division_id(self, field):
+        if not field.data:
+            raise ValidationError("Please select a division")
 
 class ScoreUploadForm(FlaskForm):
     gameweek = SelectField('Gameweek', coerce=int, validators=[DataRequired()])
