@@ -12,8 +12,14 @@ class Config:
     
     # Set up the database URI
     if os.environ.get('RENDER'):
-        # On Render.com, use NeonDB
-        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+        # On Render.com, use NeonDB with specific connection parameters
+        SQLALCHEMY_DATABASE_URI = 'postgresql://neondb_owner:npg_rC8Pfz1cpGWd@ep-long-forest-aen4vm28-pooler.c-2.us-east-2.aws.neon.tech/neondb'
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'connect_args': {
+                'sslmode': 'require',
+                'channel_binding': 'require'
+            }
+        }
     else:
         # Local development
         db_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fantasy_league.db')
