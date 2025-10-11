@@ -1,8 +1,9 @@
 from flask import render_template, redirect, url_for, flash, request
 from app.main import bp
-from app.models import Season, Division, Team, TeamSeason, Fixture, CupCompetition, Title, Gameweek, CupRound, Rule, ManagerMonth, ManagerOfTheMonth, CupGroup, CupGroupMatch
+from app.models import Season, Division, Team, TeamSeason, Fixture, CupCompetition, Title, Gameweek, CupRound, Rule
+from app.models import ManagerMonth, ManagerOfTheMonth, CupGroup, CupGroupMatch, CupMatch
 from app import db
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 import markdown
 
 @bp.route('/')
@@ -271,13 +272,20 @@ def cups():
     view_type = request.args.get('view', 'group_stage')
     
     if selected_season:
-        # Find any cup for the season (remove hardcoded name)
-        cup = CupCompetition.query.filter_by(season_id=selected_season.id).first()
+        # Find all cups for the season, ordered by id to ensure consistency
+        cups = CupCompetition.query.filter_by(season_id=selected_season.id).order_by(CupCompetition.id).all()
+        cup = cups[0] if cups else None
         
         if cup:
             # Auto-switch to knockout view for previous seasons without groups
             if not cup.has_groups and view_type == 'group_stage' and not selected_season.is_current:
                 view_type = 'knockout'
+            
+            # Ensure all cup data is loaded
+            if not selected_season.is_current:
+                # For past seasons, eagerly load all cup-related data
+                for round in cup.rounds:
+                    db.session.query(CupMatch).filter_by(round_id=round.id).all()
             
             groups = None
             rounds = None
@@ -538,8 +546,37 @@ def team_profile(team_id):
             Fixture.home_score.isnot(None),
             Fixture.away_score.isnot(None)
         ).order_by(Gameweek.number.desc()).limit(5).all()
+
+        # Get current cup status
+        current_cup = CupCompetition.query.filter_by(season_id=current_season.id).first()
+        cup_matches = []
+        if current_cup:
+            # Get all cup matches for this team
+            cup_matches = CupMatch.query.join(
+                CupRound, CupMatch.round_id == CupRound.id
+            ).filter(
+                CupRound.competition_id == current_cup.id,
+                or_(
+                    CupMatch.home_team_id == team.id,
+                    CupMatch.away_team_id == team.id
+                )
+            ).all()
+
+            # Get group stage matches if applicable
+            if current_cup.has_groups:
+                group_matches = CupGroupMatch.query.join(
+                    CupGroup, CupGroupMatch.group_id == CupGroup.id
+                ).filter(
+                    CupGroup.competition_id == current_cup.id,
+                    or_(
+                        CupGroupMatch.home_team_id == team.id,
+                        CupGroupMatch.away_team_id == team.id
+                    )
+                ).all()
+                cup_matches.extend(group_matches)
     else:
         recent_fixtures = []
+        cup_matches = []
 
     return render_template(
         'main/team_profile.html',
@@ -550,7 +587,8 @@ def team_profile(team_id):
         cup_titles=cup_titles,
         runners_up=runners_up,
         next_match=next_match,
-        fixtures=recent_fixtures
+        fixtures=recent_fixtures,
+        cup_matches=cup_matches
     )
 
 @bp.route('/teams')
