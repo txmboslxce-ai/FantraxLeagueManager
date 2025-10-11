@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -5,6 +6,9 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_bootstrap import Bootstrap4
 from config import Config
+
+# Load environment variables from .env file
+load_dotenv()
 
 db = SQLAlchemy()
 migrate = Migrate()
