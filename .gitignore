@@ -5,3 +5,5 @@ __pycache__/
 venv/
 .venv/
 .DS_Store
+update_admin_pass.py
+reset_admin_password.py
