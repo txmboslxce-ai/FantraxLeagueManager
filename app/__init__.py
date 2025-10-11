@@ -27,15 +27,17 @@ def create_app(config_class=Config):
     login_manager.init_app(app)
     bootstrap.init_app(app)
     
+    # Configure logging for debug mode
     if app.debug:
-        # Add detailed error logging in debug mode
         import logging
         from logging.handlers import RotatingFileHandler
-        import os
         
-        if not os.path.exists('logs'):
-            os.mkdir('logs')
-        file_handler = RotatingFileHandler('logs/fantrax.log', maxBytes=10240, backupCount=10)
+        log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'logs')
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+            
+        log_file = os.path.join(log_dir, 'fantrax.log')
+        file_handler = RotatingFileHandler(log_file, maxBytes=10240, backupCount=10)
         file_handler.setFormatter(logging.Formatter(
             '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
         ))
@@ -44,7 +46,8 @@ def create_app(config_class=Config):
         app.logger.setLevel(logging.INFO)
         app.logger.info('Fantrax League Manager startup')
     
-    if not os.environ.get('RENDER'):
+    is_render = bool(os.environ.get('RENDER'))
+    if not is_render:
         # Only auto-create tables in development
         with app.app_context():
             db.create_all()
