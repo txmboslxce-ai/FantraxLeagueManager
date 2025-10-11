@@ -514,7 +514,6 @@ class CupGroup(db.Model):
     order = db.Column(db.Integer, nullable=False)  # 1-12 for sorting
     
     # Relationships
-    competition = db.relationship('CupCompetition', backref='groups')
     teams = db.relationship('CupGroupTeam', backref='group', lazy=True)
     matches = db.relationship('CupGroupMatch', backref='group', lazy=True)
     
