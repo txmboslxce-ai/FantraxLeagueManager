@@ -22,6 +22,33 @@ def create_app(config_class=Config):
     login_manager.init_app(app)
     bootstrap.init_app(app)
     
+    with app.app_context():
+        # Create database tables
+        db.create_all()
+        
+        # Check if we have any seasons
+        from app.models import Season, User
+        if not Season.query.first():
+            from datetime import date
+            # Create a default season
+            season = Season(
+                name='2025/26',
+                start_date=date(2025, 8, 1),
+                end_date=date(2026, 5, 31),
+                is_current=True
+            )
+            db.session.add(season)
+            
+            # Create admin user if it doesn't exist
+            if not User.query.filter_by(username='admin').first():
+                admin = User(username='admin', 
+                           email='admin@example.com',
+                           is_admin=True)
+                admin.set_password('admin123')
+                db.session.add(admin)
+            
+            db.session.commit()
+    
     # Register template filters
     from app.template_filters import init_template_filters
     init_template_filters(app)
