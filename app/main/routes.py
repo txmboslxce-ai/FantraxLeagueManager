@@ -282,7 +282,7 @@ def cups():
             message="No season found."
         )
     
-    # Find cup competition for the selected season with eager loading
+    # Find cup competition for the selected season with eager loading and debug info
     cup = CupCompetition.query.options(
         db.joinedload(CupCompetition.rounds).joinedload(CupRound.matches),
         db.joinedload(CupCompetition.groups).joinedload(CupGroup.matches)
@@ -296,7 +296,27 @@ def cups():
             selected_season=selected_season,
             cup=None,
             view_type=view_type,
-            message=f"No cup competition found for the {selected_season.name} season."
+            message=f"No cup competition found for the {selected_season.name} season. Please create a cup competition in the admin panel."
+        )
+    
+    # Add debug info to see what data we have
+    debug_info = f"""
+        Cup found:
+        - Name: {cup.name}
+        - Has Groups: {cup.has_groups}
+        - Groups: {len(cup.groups) if cup.groups else 0}
+        - Rounds: {len(cup.rounds) if cup.rounds else 0}
+    """
+    
+    if not cup.has_groups and not cup.rounds:
+        return render_template(
+            'main/cups.html',
+            title='Cup Competition',
+            seasons=seasons,
+            selected_season=selected_season,
+            cup=None,
+            view_type=view_type,
+            message=f"Cup competition exists but has no {view_type} configured yet. {debug_info}"
         )
     
     # Auto-switch to knockout view for non-group stage cups
