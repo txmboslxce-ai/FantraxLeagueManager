@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, SelectField, DateField, IntegerField, BooleanField, SubmitField, HiddenField
-from wtforms.validators import DataRequired, Optional
+from wtforms.validators import DataRequired, Optional, NumberRange, ValidationError
 from app.models import Division, Team, Gameweek, Season
 
 class DivisionForm(FlaskForm):
@@ -34,8 +34,10 @@ class ScoreUploadForm(FlaskForm):
 class CupCompetitionForm(FlaskForm):
     name = StringField('Competition Name', validators=[DataRequired()])
     has_groups = BooleanField('Use Group Stage Format')
-    num_groups = IntegerField('Number of Groups', default=12)
-    teams_per_group = IntegerField('Teams per Group', default=3)
+    num_groups = IntegerField('Number of Groups', default=12, 
+                            validators=[Optional(), NumberRange(min=1, max=26, message="Number of groups must be between 1 and 26")])
+    teams_per_group = IntegerField('Teams per Group', default=3,
+                                validators=[Optional(), NumberRange(min=2, message="Must have at least 2 teams per group")])
     submit = SubmitField('Create Cup Competition')
 
 class CupGroupTeamForm(FlaskForm):

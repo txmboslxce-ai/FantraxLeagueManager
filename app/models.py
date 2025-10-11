@@ -20,7 +20,12 @@ class User(UserMixin, db.Model):
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
         
     def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
+        print(f"Checking password for user: {self.username}")
+        print(f"Stored hash: {self.password_hash}")
+        print(f"Testing password: {password}")
+        result = check_password_hash(self.password_hash, password)
+        print(f"Password check result: {result}")
+        return result
 
 class Season(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -278,19 +283,27 @@ class CupCompetition(db.Model):
     num_groups = db.Column(db.Integer, default=12)  # Number of groups
     teams_per_group = db.Column(db.Integer, default=3)  # Teams per group
     rounds = db.relationship('CupRound', backref='competition', lazy=True)
+    groups = db.relationship('CupGroup', backref='competition', lazy=True, cascade='all, delete-orphan')
     
     def create_initial_groups(self):
         """Create the initial empty groups for the competition"""
         if self.has_groups and not self.groups:
-            group_names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
-            for i in range(self.num_groups):
-                group = CupGroup(
-                    competition_id=self.id,
-                    name=f"Group {group_names[i]}",
-                    order=i + 1
-                )
-                db.session.add(group)
-            db.session.commit()
+            # Create group names dynamically based on num_groups
+            from string import ascii_uppercase
+            group_names = list(ascii_uppercase[:self.num_groups])
+            
+            try:
+                for i in range(self.num_groups):
+                    group = CupGroup(
+                        competition_id=self.id,
+                        name=f"Group {group_names[i]}" if i < len(group_names) else f"Group {i + 1}",
+                        order=i + 1
+                    )
+                    db.session.add(group)
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                raise Exception(f"Error creating groups: {str(e)}")
     
     @property
     def group_stage_complete(self):

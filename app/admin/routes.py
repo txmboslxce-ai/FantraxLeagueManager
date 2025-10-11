@@ -208,12 +208,38 @@ def edit_team(team_id):
 @login_required
 @admin_required
 def manage_fixtures():
-    form = BulkFixtureForm()
-    current_season = Season.query.filter_by(is_current=True).first()
+    from flask import current_app, request
+    import traceback
     
-    if current_season:
+    def log_error(e, context=""):
+        error_msg = f'Error in manage_fixtures {context}: {str(e)}'
+        current_app.logger.error(error_msg)
+        if current_app.debug:
+            current_app.logger.error(traceback.format_exc())
+        return error_msg
+    
+    form = BulkFixtureForm()
+    
+    try:
+        # Log request details in debug mode
+        if current_app.debug and request.method == 'POST':
+            current_app.logger.info(f'POST data: {request.form.to_dict()}')
+            
+        current_season = Season.query.filter_by(is_current=True).first()
+        if not current_season:
+            error_msg = "No current season found. Please create a season first."
+            log_error(error_msg)
+            flash(error_msg, 'warning')
+            return redirect(url_for('admin.manage_seasons'))
+
         # Get divisions for the form
         divisions = Division.query.filter_by(season_id=current_season.id).all()
+        if not divisions:
+            error_msg = "No divisions found for the current season. Please create a division first."
+            log_error(error_msg)
+            flash(error_msg, 'warning')
+            return redirect(url_for('admin.manage_divisions'))
+            
         form.division_id.choices = [(d.id, d.name) for d in divisions]
         
         if form.validate_on_submit():
@@ -221,8 +247,141 @@ def manage_fixtures():
             error_count = 0
             fixtures_text = form.fixtures_text.data.strip().split('\n')
             
+            # Verify gameweeks exist
+            gameweeks = {gw.number: gw for gw in 
+                        Gameweek.query.filter_by(season_id=current_season.id).all()}
+            if not gameweeks:
+                error_msg = "No gameweeks found for the current season."
+                log_error(error_msg)
+                flash(error_msg, 'danger')
+                return redirect(url_for('admin.manage_fixtures'))
+
+            # Get all teams for lookup
+            all_teams = {normalize_team_name(team.name): team for team in Team.query.all()}
+            
+            try:
+                for fixture_line in fixtures_text:
+                    if not fixture_line.strip():
+                        continue
+                        
+                    parts = [p.strip() for p in fixture_line.split('\t') if p.strip()]
+                    
+                    if len(parts) != 3:
+                        error_msg = f'Invalid line format: {fixture_line}'
+                        log_error(error_msg)
+                        flash(error_msg, 'danger')
+                        error_count += 1
+                        continue
+
+                    try:
+                        gameweek_number = int(parts[0])
+                        home_team_name = normalize_team_name(parts[1])
+                        away_team_name = normalize_team_name(parts[2])
+                        
+                        gameweek = gameweeks.get(gameweek_number)
+                        if not gameweek:
+                            error_msg = f'Could not find gameweek {gameweek_number}'
+                            log_error(error_msg)
+                            flash(error_msg, 'danger')
+                            error_count += 1
+                            continue
+
+                        home_team = all_teams.get(home_team_name)
+                        away_team = all_teams.get(away_team_name)
+                        
+                        if not home_team or not away_team:
+                            if not home_team:
+                                error_msg = f'Could not find home team: "{parts[1]}"'
+                                log_error(error_msg)
+                                flash(error_msg, 'danger')
+                            if not away_team:
+                                error_msg = f'Could not find away team: "{parts[2]}"'
+                                log_error(error_msg)
+                                flash(error_msg, 'danger')
+                            error_count += 1
+                            continue
+
+                        # Check for existing fixture
+                        existing = Fixture.query.filter_by(
+                            gameweek_id=gameweek.id,
+                            home_team_id=home_team.id,
+                            away_team_id=away_team.id
+                        ).first()
+                        
+                        if existing:
+                            error_msg = f'Fixture already exists: GW{gameweek_number} - {parts[1]} vs {parts[2]}'
+                            log_error(error_msg)
+                            flash(error_msg, 'warning')
+                            error_count += 1
+                            continue
+
+                        fixture = Fixture(
+                            gameweek_id=gameweek.id,
+                            home_team_id=home_team.id,
+                            away_team_id=away_team.id,
+                            division_id=form.division_id.data
+                        )
+                        db.session.add(fixture)
+                        success_count += 1
+                        
+                    except ValueError as ve:
+                        error_msg = f'Invalid gameweek number in line: {fixture_line}'
+                        log_error(ve, error_msg)
+                        flash(error_msg, 'danger')
+                        error_count += 1
+                        continue
+                        
+                if success_count > 0:
+                    db.session.commit()
+                    flash(f'Successfully created {success_count} fixtures!', 'success')
+                if error_count > 0:
+                    flash(f'Failed to create {error_count} fixtures. Check the error messages above.', 'warning')
+                    
+            except Exception as e:
+                db.session.rollback()
+                error_msg = f'Error processing fixtures: {str(e)}'
+                log_error(e, "processing fixtures")
+                flash(error_msg, 'danger')
+                
+        # Get existing fixtures
+        fixtures = Fixture.query.join(Gameweek).filter(
+            Gameweek.season_id == current_season.id
+        ).order_by(Gameweek.number).all()
+            
+    except Exception as e:
+        error_msg = log_error(e, "unexpected error")
+        flash(f'An unexpected error occurred: {error_msg}', 'danger')
+        fixtures = []
+    
+    return render_template('admin/fixtures.html', title='Manage Fixtures',
+                         form=form, fixtures=fixtures)
+    
+    if not current_season:
+        flash('No current season found. Please create a season first.', 'warning')
+        return redirect(url_for('admin.manage_seasons'))
+
+    try:
+        # Get divisions for the form
+        divisions = Division.query.filter_by(season_id=current_season.id).all()
+        if not divisions:
+            flash('No divisions found for the current season. Please create a division first.', 'warning')
+            return redirect(url_for('admin.manage_divisions'))
+            
+        form.division_id.choices = [(d.id, d.name) for d in divisions]
+        
+        if form.validate_on_submit():
+            success_count = 0
+            error_count = 0
+            fixtures_text = form.fixtures_text.data.strip().split('\n')
+            
+            # Verify gameweeks exist for the current season
+            existing_gameweeks = {gw.number: gw for gw in Gameweek.query.filter_by(season_id=current_season.id).all()}
+            if not existing_gameweeks:
+                flash('No gameweeks found for the current season.', 'danger')
+                return redirect(url_for('admin.manage_fixtures'))
+                
             # Get all teams once for faster lookup
-            all_teams = {team.name: team for team in Team.query.all()}
+            all_teams = {normalize_team_name(team.name): team for team in Team.query.all()}
             
             for fixture_line in fixtures_text:
                 if not fixture_line.strip():  # Skip empty lines
@@ -283,21 +442,34 @@ def manage_fixtures():
                     error_count += 1
                     flash(f'Invalid line format: {fixture_line}', 'danger')
             
-            db.session.commit()
-            if success_count > 0:
-                flash(f'Successfully created {success_count} fixtures!', 'success')
-            if error_count > 0:
-                flash(f'Failed to create {error_count} fixtures. Check the error messages above.', 'warning')
+            try:
+                db.session.commit()
+                if success_count > 0:
+                    flash(f'Successfully created {success_count} fixtures!', 'success')
+                if error_count > 0:
+                    flash(f'Failed to create {error_count} fixtures. Check the error messages above.', 'warning')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Database error: {str(e)}', 'danger')
             return redirect(url_for('admin.manage_fixtures'))
+    except Exception as e:
+        flash(f'An error occurred: {str(e)}', 'danger')
+        return redirect(url_for('admin.manage_fixtures'))
     
+    # Get existing fixtures
     fixtures = []
-    if current_season:
-        fixtures = Fixture.query.join(
-            Gameweek
-        ).filter(
+    try:
+        fixtures = Fixture.query.join(Gameweek).filter(
             Gameweek.season_id == current_season.id
-        ).order_by(
-            Gameweek.number
+        ).order_by(Gameweek.number).all()
+    except Exception as e:
+        flash(f'Error loading fixtures: {str(e)}', 'danger')
+    
+    return render_template('admin/fixtures.html', title='Manage Fixtures',
+                         form=form, fixtures=fixtures)
+    except Exception as e:
+        flash(f'Error loading fixtures: {str(e)}', 'danger')
+        fixtures = []
         ).all()
     
     return render_template('admin/fixtures.html', title='Manage Fixtures',
@@ -455,28 +627,53 @@ def upload_scores():
 def manage_cups():
     form = CupCompetitionForm()
     current_season = Season.query.filter_by(is_current=True).first()
-    if current_season and form.validate_on_submit():
-        cup = CupCompetition(
-            name=form.name.data, 
-            season_id=current_season.id,
-            has_groups=form.has_groups.data,
-            num_groups=form.num_groups.data if form.has_groups.data else 0,
-            teams_per_group=form.teams_per_group.data if form.has_groups.data else 0
-        )
-        db.session.add(cup)
-        db.session.commit()
-        
-        # Create initial groups if using group format
-        if cup.has_groups:
-            cup.create_initial_groups()
-        
-        flash(f'Cup competition {cup.name} has been created!', 'success')
-        return redirect(url_for('admin.manage_cups'))
     
-    cups = []
-    if current_season:
-        cups = CupCompetition.query.filter_by(season_id=current_season.id).all()
+    if not current_season:
+        flash('No current season found. Please create a season first.', 'warning')
+        return redirect(url_for('admin.manage_seasons'))
     
+    if form.validate_on_submit():
+        try:
+            # Validate group settings
+            if form.has_groups.data:
+                if not form.num_groups.data or form.num_groups.data < 1:
+                    flash('Number of groups must be at least 1', 'danger')
+                    return render_template('admin/cups.html', title='Manage Cups',
+                                        form=form, cups=CupCompetition.query.filter_by(season_id=current_season.id).all())
+                if not form.teams_per_group.data or form.teams_per_group.data < 2:
+                    flash('Teams per group must be at least 2', 'danger')
+                    return render_template('admin/cups.html', title='Manage Cups',
+                                        form=form, cups=CupCompetition.query.filter_by(season_id=current_season.id).all())
+            
+            cup = CupCompetition(
+                name=form.name.data, 
+                season_id=current_season.id,
+                has_groups=form.has_groups.data,
+                num_groups=form.num_groups.data if form.has_groups.data else 0,
+                teams_per_group=form.teams_per_group.data if form.has_groups.data else 0
+            )
+            db.session.add(cup)
+            db.session.commit()
+            
+            # Create initial groups if using group format
+            if cup.has_groups:
+                try:
+                    cup.create_initial_groups()
+                except Exception as e:
+                    db.session.delete(cup)
+                    db.session.commit()
+                    flash(f'Error creating groups: {str(e)}', 'danger')
+                    return render_template('admin/cups.html', title='Manage Cups',
+                                        form=form, cups=CupCompetition.query.filter_by(season_id=current_season.id).all())
+            
+            flash(f'Cup competition {cup.name} has been created!', 'success')
+            return redirect(url_for('admin.manage_cups'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating cup competition: {str(e)}', 'danger')
+    
+    cups = CupCompetition.query.filter_by(season_id=current_season.id).all()
     return render_template('admin/cups.html', title='Manage Cups',
                          form=form, cups=cups)
 
