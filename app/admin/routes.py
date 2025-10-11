@@ -467,13 +467,6 @@ def manage_fixtures():
     
     return render_template('admin/fixtures.html', title='Manage Fixtures',
                          form=form, fixtures=fixtures)
-    except Exception as e:
-        flash(f'Error loading fixtures: {str(e)}', 'danger')
-        fixtures = []
-        ).all()
-    
-    return render_template('admin/fixtures.html', title='Manage Fixtures',
-                         form=form, fixtures=fixtures)
 
 @bp.route('/scores', methods=['GET', 'POST'])
 @login_required
