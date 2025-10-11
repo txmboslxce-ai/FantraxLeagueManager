@@ -61,12 +61,12 @@
                 {% if teams %}
                     <div class="table-responsive">
                         <table class="table table-striped">
-                            <thead>
+                                                        <thead>
                                 <tr>
-                                    <th>Team Name</th>
+                                    <th>Team</th>
                                     <th>Manager</th>
-                                    <th>Current Division</th>
-                                    <th class="text-end">Actions</th>
+                                    <th>Division</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -87,13 +87,18 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
+                                        <a href="{{ url_for('admin.manage_team_titles', team_id=team.id) }}" 
+                                           class="btn btn-sm btn-outline-success me-2" title="Manage Titles">
+                                            <i class="fas fa-trophy"></i>
+                                        </a>
                                         <a href="{{ url_for('admin.edit_team', team_id=team.id) }}" 
-                                           class="btn btn-sm btn-outline-primary me-2">
+                                           class="btn btn-sm btn-outline-primary me-2" title="Edit Team">
                                             <i class="fas fa-edit"></i>
                                         </a>
                                         <form method="POST" action="{{ url_for('admin.delete_team', team_id=team.id) }}" class="d-inline">
                                             <button type="submit" class="btn btn-sm btn-outline-danger" 
-                                                    onclick="return confirm('Are you sure you want to delete {{ team.name }}? This action cannot be undone.')">
+                                                    onclick="return confirm('Are you sure you want to delete {{ team.name }}? This action cannot be undone.')"
+                                                    title="Delete Team">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </form>

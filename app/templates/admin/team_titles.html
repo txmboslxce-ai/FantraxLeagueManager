@@ -1,0 +1,114 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>{{ team.name }} - Titles</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4>Add New Title</h4>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {{ form.hidden_tag() }}
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            {{ form.season_id.label(class="form-label") }}
+                            {{ form.season_id(class="form-select") }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            {{ form.type.label(class="form-label") }}
+                            {{ form.type(class="form-select") }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            {{ form.division_id.label(class="form-label") }}
+                            {{ form.division_id(class="form-select") }}
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    {{ form.is_runner_up(class="form-check-input") }}
+                    {{ form.is_runner_up.label(class="form-check-label") }}
+                </div>
+                <div>
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h4>Existing Titles</h4>
+        </div>
+        <div class="card-body">
+            {% if titles %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Season</th>
+                            <th>Type</th>
+                            <th>Division/Cup</th>
+                            <th>Position</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for title in titles %}
+                        <tr>
+                            <td>{{ title.season.name }}</td>
+                            <td>{{ title.type|capitalize }}</td>
+                            <td>
+                                {% if title.type == 'league' %}
+                                    {{ title.division.name if title.division }}
+                                {% else %}
+                                    Cup Competition
+                                {% endif %}
+                            </td>
+                            <td>{{ "Runner Up" if title.is_runner_up else "Winner" }}</td>
+                            <td>
+                                <form action="{{ url_for('admin.delete_title', title_id=title.id) }}" 
+                                      method="post" class="d-inline" 
+                                      onsubmit="return confirm('Are you sure you want to delete this title?');">
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No titles found for this team.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show/hide division field based on title type
+    const typeSelect = document.getElementById('type');
+    const divisionField = document.getElementById('division_id').parentElement.parentElement;
+    
+    function toggleDivisionField() {
+        if (typeSelect.value === 'league') {
+            divisionField.style.display = 'block';
+        } else {
+            divisionField.style.display = 'none';
+        }
+    }
+    
+    typeSelect.addEventListener('change', toggleDivisionField);
+    toggleDivisionField(); // Initial state
+});
+</script>
+{% endblock %}

@@ -7,7 +7,8 @@ from app.admin import bp
 from app.admin.forms import (DivisionForm, TeamForm, EditTeamForm, BulkFixtureForm, ScoreUploadForm,
                            CupCompetitionForm, CupRoundForm, CupMatchForm,
                            CupGroupTeamForm, CupGroupMatchForm, EditCupGroupMatchForm,
-                           ManagerMonthForm, SeasonForm, EditSeasonForm, EndSeasonForm, RulesForm)
+                           ManagerMonthForm, SeasonForm, EditSeasonForm, EndSeasonForm, RulesForm,
+                           TitleForm)
 from app.models import (Division, Team, TeamSeason, Fixture, CupCompetition,
                        CupRound, CupMatch, CupGroup, CupGroupTeam, CupGroupMatch,
                        ManagerMonth, ManagerOfTheMonth,
@@ -33,6 +34,45 @@ def dashboard():
     current_season = Season.query.filter_by(is_current=True).first()
     return render_template('admin/dashboard.html', title='Admin Dashboard',
                          season=current_season)
+
+@bp.route('/title/<int:title_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_title(title_id):
+    title = Title.query.get_or_404(title_id)
+    team_id = title.team_id
+    db.session.delete(title)
+    db.session.commit()
+    flash('Title deleted successfully.', 'success')
+    return redirect(url_for('admin.manage_team_titles', team_id=team_id))
+
+@bp.route('/team/<int:team_id>/titles', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manage_team_titles(team_id):
+    team = Team.query.get_or_404(team_id)
+    form = TitleForm()
+    
+    # Load choices for dropdowns
+    form.season_id.choices = [(s.id, s.name) for s in Season.query.order_by(Season.start_date.desc()).all()]
+    form.division_id.choices = [(d.id, d.name) for d in Division.query.all()]
+    
+    if form.validate_on_submit():
+        title = Title(
+            team_id=team_id,
+            season_id=form.season_id.data,
+            type=form.type.data,
+            division_id=form.division_id.data if form.type.data == 'league' else None,
+            is_runner_up=form.is_runner_up.data
+        )
+        db.session.add(title)
+        db.session.commit()
+        flash(f'Title added for {team.name}!', 'success')
+        return redirect(url_for('admin.manage_team_titles', team_id=team_id))
+    
+    titles = Title.query.filter_by(team_id=team_id).order_by(Title.season_id.desc()).all()
+    return render_template('admin/team_titles.html', title=f'Manage {team.name} Titles',
+                         team=team, form=form, titles=titles)
 
 @bp.route('/divisions', methods=['GET', 'POST'])
 @login_required

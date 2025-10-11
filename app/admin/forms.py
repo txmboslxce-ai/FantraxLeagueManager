@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, SelectField, DateField, IntegerField, BooleanField, SubmitField, HiddenField
 from wtforms.validators import DataRequired, Optional
-from app.models import Division, Team, Gameweek
+from app.models import Division, Team, Gameweek, Season
 
 class DivisionForm(FlaskForm):
     name = StringField('Division Name', validators=[DataRequired()])
@@ -47,6 +47,16 @@ class CupGroupMatchForm(FlaskForm):
     away_team_id = SelectField('Away Team', coerce=int, validators=[DataRequired()])
     gameweek_id = SelectField('Gameweek', coerce=int, validators=[Optional()])
     submit = SubmitField('Create Match')
+
+class TitleForm(FlaskForm):
+    team_id = SelectField('Team', coerce=int, validators=[DataRequired()])
+    season_id = SelectField('Season', coerce=int, validators=[DataRequired()])
+    type = SelectField('Title Type', 
+                      choices=[('cup', 'Cup'), ('league', 'League')], 
+                      validators=[DataRequired()])
+    division_id = SelectField('Division', coerce=int)
+    is_runner_up = BooleanField('Runner Up')
+    submit = SubmitField('Add Title')
 
 class EditCupGroupMatchForm(FlaskForm):
     gameweek_id = SelectField('Gameweek', coerce=int, validators=[Optional()])
