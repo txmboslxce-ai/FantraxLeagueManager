@@ -1,0 +1,698 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  /* Base styles */
+  .card-body table tr.text-muted td,
+  .card-body table tr.text-muted td a,
+  .card-body table tr.text-muted td span {
+    color: #adb5bd !important;
+  }
+
+  /* Mobile-specific styles */
+  @media (max-width: 768px) {
+    .mobile-stack {
+      display: flex;
+      flex-direction: column;
+    }
+    .mobile-stack > div {
+      margin-bottom: 0.5rem;
+      width: 100%;
+    }
+    .mobile-stack > div:last-child {
+      margin-bottom: 0;
+    }
+    .table-mobile td, 
+    .table-mobile th {
+      font-size: 0.875rem;
+      padding: 0.5rem;
+    }
+    .match-card {
+      margin-bottom: 1rem;
+    }
+    .match-card:last-child {
+      margin-bottom: 0;
+    }
+    .team-name {
+      font-size: 0.85rem;
+      line-height: 1.2;
+    }
+    .score-badge {
+      font-size: 0.8rem;
+      min-width: 3.75rem;
+      padding: 0.3rem 0.2rem;
+      width: 3.75rem;
+    }
+    .match-table td {
+      padding: 0.25rem 0.125rem;
+    }
+    .round-info {
+      font-size: 0.8rem;
+    }
+    .gameweek-info {
+      display: block;
+      margin-top: 0.25rem;
+    }
+  }
+
+  .cup-round {
+    margin-bottom: 2.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid #eee;
+  }
+
+  .cup-round:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .cup-round-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #333;
+  }
+
+  .cup-round-gameweek {
+    font-size: 0.9rem;
+    font-style: italic;
+    color: #6c757d;
+    margin-bottom: 1.5rem;
+  }
+
+  .match-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    height: 100%;
+  }
+
+  .match-header {
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .match-body {
+    padding: 0.75rem;
+  }
+
+  .match-table {
+    width: 100%;
+    font-size: 0.85rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    table-layout: fixed;
+  }
+
+  .match-table td {
+    padding: 0.15rem 0.25rem;
+    vertical-align: middle;
+    overflow: hidden;
+  }
+
+  .leg-label {
+    font-size: 0.9rem;
+    font-style: italic;
+    color: #6c757d;
+    text-align: center;
+    padding-bottom: 0.2rem !important;
+  }
+
+  .team-name {
+    font-weight: 500;
+    color: #333;
+    text-decoration: none;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    display: block;
+  }
+
+  .score-badge {
+    display: inline-block;
+    min-width: 3.75rem;
+    padding: 0.3rem 0.2rem;
+    font-size: 0.85rem;
+    font-weight: normal;
+    text-align: center;
+    background: #f8f9fa;
+    border-radius: 4px;
+    white-space: nowrap;
+    width: 3.75rem;
+  }
+
+  .score-badge.fw-bold {
+    background: #e9ecef;
+    font-weight: 500 !important;
+    min-width: 3.75rem;
+    width: 3.75rem;
+    white-space: nowrap;
+  }
+
+  /* Match result styling */
+  .match-winner {
+    font-weight: 600 !important;
+    color: #333 !important;
+  }
+  
+  .match-winner .score-badge {
+    background: #d1e7dd !important;
+    font-weight: 600 !important;
+    color: #0f5132 !important;
+  }
+  
+  .match-loser {
+    opacity: 0.8;
+    color: #495057 !important;
+  }
+  
+  .match-loser .score-badge {
+    opacity: 0.8;
+    background: #f8f9fa !important;
+    color: #495057 !important;
+  }
+
+  .match-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(400px, 1fr));
+    gap: 1.5rem;
+    align-items: stretch;
+  }
+
+  @media (max-width: 1200px) {
+    .match-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .match-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Group Stage Styles */
+  .group-card {
+    transition: transform 0.2s ease;
+    height: 100%;
+  }
+  .group-card:hover {
+    transform: translateY(-2px);
+  }
+  
+  .group-card .card-body {
+    padding: 0.75rem;
+  }
+  
+  .qualification-legend {
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+  }
+  
+  .qualification-legend .badge {
+    margin-right: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  /* Position indicator circles */
+  .position-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    margin-right: 0.5rem;
+  }
+  
+  .position-indicator.top-8 {
+    background-color: #198754; /* Bootstrap success green */
+  }
+  
+  .position-indicator.playoff {
+    background-color: #6c757d; /* Bootstrap secondary grey */
+  }
+  
+  .position-indicator.eliminated {
+    background-color: #dc3545; /* Bootstrap danger red */
+  }
+
+  /* Group fixture styling */
+  .list-group-item {
+    padding: 0.15rem 0 !important;
+    border-bottom: 1px solid #dee2e6;
+  }
+  
+  .list-group-item:last-child {
+    border-bottom: none;
+  }
+
+  /* Table styling for group stage */
+  .group-table {
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem !important;
+    table-layout: fixed;
+    width: 100%;
+  }
+  
+  .group-table th,
+  .group-table td {
+    padding: 0.25rem 0.125rem !important;
+    vertical-align: middle;
+    overflow: hidden;
+  }
+  
+  .group-table td a {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
+  }
+
+  /* Mobile adjustments for fixtures */
+  @media (max-width: 768px) {
+    .list-group-item .fw-bold {
+      font-size: 0.85rem;
+    }
+    .list-group-item .score-badge {
+      font-size: 0.8rem;
+      min-width: 3rem;
+      width: 3rem;
+      padding: 0.2rem 0.1rem;
+    }
+  }
+</style>
+<div class="container">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+            <li class="breadcrumb-item active">League Cup</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">League Cup</h1>
+
+    <!-- Filter Form -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <form method="GET" class="d-flex gap-3 mobile-stack">
+                <div class="flex-grow-1">
+                    <select name="season_id" class="form-select" onchange="this.form.submit()">
+                        <option value="">Select Season</option>
+                        {% for season in all_seasons %}
+                            <option value="{{ season.id }}" {% if selected_season and selected_season.id == season.id %}selected{% endif %}>
+                                {{ season.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% if cup and cup.has_groups %}
+                <div class="flex-grow-1">
+                    <select name="view" class="form-select" onchange="this.form.submit()">
+                        <option value="group_stage" {% if view_type == 'group_stage' %}selected{% endif %}>Group Stage</option>
+                        <option value="knockout" {% if view_type == 'knockout' %}selected{% endif %}>Knockout Stage</option>
+                    </select>
+                    <input type="hidden" name="season_id" value="{{ selected_season.id if selected_season }}">
+                </div>
+                {% endif %}
+                {% if cup and groups and view_type == 'group_stage' %}
+                <div class="flex-grow-1">
+                    <select name="team_filter" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Teams</option>
+                        {% set all_teams = [] %}
+                        {% for group in groups %}
+                            {% for team_stats in group.group_table %}
+                                {% set _ = all_teams.append((team_stats.team.id, team_stats.team.name, group.name)) %}
+                            {% endfor %}
+                        {% endfor %}
+                        {% for team_id, team_name, group_name in all_teams|sort(attribute=1) %}
+                            <option value="{{ team_id }}" {% if request.args.get('team_filter')|int == team_id %}selected{% endif %}>
+                                {{ team_name }} ({{ group_name }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <input type="hidden" name="view" value="group_stage">
+                    <input type="hidden" name="season_id" value="{{ selected_season.id if selected_season }}">
+                </div>
+                {% endif %}
+                {% if all_rounds and view_type == 'knockout' %}
+                <div class="flex-grow-1">
+                    <select name="round_id" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Rounds</option>
+                        {% for rnd in all_rounds %}
+                            <option value="{{ rnd.id }}" {% if selected_round_id == rnd.id %}selected{% endif %}>
+                                {{ rnd.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <input type="hidden" name="view" value="knockout">
+                    <input type="hidden" name="season_id" value="{{ selected_season.id if selected_season }}">
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Group Stage View -->
+    {% if cup and groups and view_type == 'group_stage' %}
+        {% set selected_team_filter = request.args.get('team_filter')|int if request.args.get('team_filter') else none %}
+        <div class="row">
+            {% for group in groups %}
+                {% set show_group = true %}
+                {% if selected_team_filter %}
+                    {% set show_group = false %}
+                    {% for team_stats in group.group_table %}
+                        {% if team_stats.team.id == selected_team_filter %}
+                            {% set show_group = true %}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                
+                {% if show_group %}
+                <div class="col-xl-4 col-lg-6 col-md-12 mb-3">
+                    <div class="card group-card">
+                        <div class="card-header py-2">
+                            <h6 class="mb-0">{{ group.name }}</h6>
+                            <small class="text-muted">{{ group.matches|selectattr('home_score', 'ne', none)|list|length }} of {{ group.matches|length }} matches played</small>
+                        </div>
+                        <div class="card-body">
+                            {% if group.teams|length >= 2 %}
+                                <table class="table table-sm group-table" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 12%;">Pos</th>
+                                            <th style="width: 32%;">Team</th>
+                                            <th style="width: 8%;">P</th>
+                                            <th style="width: 8%;">W</th>
+                                            <th style="width: 8%;">D</th>
+                                            <th style="width: 8%;">L</th>
+                                            <th style="width: 12%;">PF</th>
+                                            <th style="width: 12%;">Pts</th>
+                                        </tr>
+                                    </thead>
+                                        <tbody>
+                                            {% set group_winners = cup.get_direct_qualifiers() if cup.get_direct_qualifiers else [] %}
+                                            {% for team_stats in group.group_table %}
+                                                {% set indicator_class = "eliminated" %}
+                                                
+                                                {% if loop.index == 1 %}
+                                                    {# Check if this team is in top 8 qualifiers #}
+                                                    {% set is_top8_qualifier = team_stats.team.id in group_winners|map(attribute='team.id')|list %}
+                                                    
+                                                    {# Debug: Add a comment showing the logic #}
+                                                    <!-- Team: {{ team_stats.team.name }}, ID: {{ team_stats.team.id }}, Is Top 8: {{ is_top8_qualifier }}, Group Winners Count: {{ group_winners|length }} -->
+                                                    {% if group_winners %}
+                                                        <!-- Qualifier IDs: {% for q in group_winners %}{{ q.team.id }}{% if not loop.last %},{% endif %}{% endfor %} -->
+                                                    {% endif %}
+                                                    {% if is_top8_qualifier %}
+                                                        {% set indicator_class = "top-8" %}
+                                                    {% else %}
+                                                        {% set indicator_class = "playoff" %}
+                                                    {% endif %}
+                                                {% elif loop.index == 2 %}
+                                                    {% set indicator_class = "playoff" %}
+                                                {% endif %}
+                                                
+                                                <tr>
+                                                    <td>
+                                                        <span class="position-indicator {{ indicator_class }}">{{ loop.index }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <a href="{{ url_for('main.team_profile', team_id=team_stats.team.id) }}" class="text-decoration-none">
+                                                            {{ team_stats.team.name }}
+                                                        </a>
+                                                    </td>
+                                                    <td>{{ team_stats.played }}</td>
+                                                    <td>{{ team_stats.won }}</td>
+                                                    <td>{{ team_stats.drawn }}</td>
+                                                    <td>{{ team_stats.lost }}</td>
+                                                    <td>{{ "%.1f"|format(team_stats.goals_for) }}</td>
+                                                    <td><strong>{{ team_stats.points }}</strong></td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                
+                                <!-- Group Matches -->
+                                {% if group.matches %}
+                                    <h6 class="mt-1 mb-1" style="font-size: 0.9rem;">Fixtures</h6>
+                                    <div class="list-group list-group-flush">
+                                        {% for match in group.matches %}
+                                            <div class="list-group-item px-0">
+                                                {% if match.gameweek %}
+                                                    <div class="mb-1">
+                                                        <small class="text-muted" style="font-style: italic; font-size: 0.65rem;">GW{{ match.gameweek.number }}</small>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="mb-1">
+                                                        <small class="text-warning" style="font-style: italic; font-size: 0.65rem;">No GW assigned</small>
+                                                    </div>
+                                                {% endif %}
+                                                <table class="match-table" style="width: 100%;">
+                                                    <tbody>
+                                                        {% if match.home_score is not none and match.away_score is not none %}
+                                                            {% set home_wins = match.home_score > match.away_score %}
+                                                            {% set away_wins = match.away_score > match.home_score %}
+                                                        {% else %}
+                                                            {% set home_wins = false %}
+                                                            {% set away_wins = false %}
+                                                        {% endif %}
+                                                        <tr>
+                                                            <td style="width: 70%;" class="{% if home_wins %}match-winner{% elif away_wins %}match-loser{% endif %}">
+                                                                <a href="{{ url_for('main.team_profile', team_id=match.home_team.id) }}" class="team-name fw-bold {% if home_wins %}match-winner{% elif away_wins %}match-loser{% endif %}">
+                                                                    {{ match.home_team.name }}
+                                                                </a>
+                                                            </td>
+                                                            <td class="text-center" style="width: 30%;">
+                                                                {% if match.home_score is not none %}
+                                                                    <span class="score-badge fw-bold {% if home_wins %}match-winner{% elif away_wins %}match-loser{% endif %}">{{ "%.2f"|format(match.home_score) }}</span>
+                                                                {% else %}
+                                                                    <span class="score-badge">-</span>
+                                                                {% endif %}
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="{% if away_wins %}match-winner{% elif home_wins %}match-loser{% endif %}">
+                                                                <a href="{{ url_for('main.team_profile', team_id=match.away_team.id) }}" class="team-name fw-bold {% if away_wins %}match-winner{% elif home_wins %}match-loser{% endif %}">
+                                                                    {{ match.away_team.name }}
+                                                                </a>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                {% if match.away_score is not none %}
+                                                                    <span class="score-badge fw-bold {% if away_wins %}match-winner{% elif home_wins %}match-loser{% endif %}">{{ "%.2f"|format(match.away_score) }}</span>
+                                                                {% else %}
+                                                                    <span class="score-badge">-</span>
+                                                                {% endif %}
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-users text-muted mb-2" style="font-size: 2rem;"></i>
+                                    <p class="text-muted mb-0">The group stage draw has not taken place yet.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        
+        <!-- Single Legend for All Groups -->
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="qualification-legend">
+                            <span class="position-indicator top-8 me-1">1</span> Group Winner (Top 8 qualify directly)
+                            <span class="position-indicator playoff me-1 ms-3">1</span> Group Winner (Playoff round)
+                            <span class="position-indicator playoff me-1 ms-3">2</span> Runner-up (Playoff round)
+                            <span class="position-indicator eliminated me-1 ms-3">3</span> Eliminated
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Qualification Summary -->
+        {% if cup.group_stage_complete %}
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="fas fa-trophy"></i> Direct to Round of 16</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-2">Top 8 Group Winners</p>
+                            {% for qualifier in cup.get_direct_qualifiers() %}
+                                <div class="d-flex justify-content-between align-items-center py-1">
+                                    <span>{{ qualifier.team.name }}</span>
+                                    <small class="text-muted">{{ qualifier.group.name }} ({{ qualifier.points }} pts, {{ "%.1f"|format(qualifier.goals_for) }} PF)</small>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0"><i class="fas fa-futbol"></i> Playoff Round</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-2">Bottom 4 Winners + All Second Place</p>
+                            {% for team in cup.get_playoff_teams() %}
+                                <div class="d-flex justify-content-between align-items-center py-1">
+                                    <span>{{ team.team.name }}</span>
+                                    <small class="text-muted">{{ team.group.name }} {{ team.position|default('4th Best') }} ({{ team.points }} pts, {{ "%.1f"|format(team.goals_for) }} PF)</small>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        
+        <!-- Add some spacing at the bottom -->
+        <div class="mb-5"></div>
+    {% endif %}
+
+    <!-- Knockout Stage View -->
+    {% if cup and cup.rounds and view_type == 'knockout' %}
+        {% for round in cup.rounds|sort(attribute='order', reverse=true) %}
+            {% if not selected_round_id or selected_round_id|int == round.id %}
+            <div class="cup-round">
+                <h2 class="cup-round-title">{{ round.name }}</h2>
+                <div class="cup-round-gameweek">First Leg: Gameweek {{ round.first_leg_gameweek.number }} | Second Leg: Gameweek {{ round.second_leg_gameweek.number }}</div>
+                {% if round.matches %}
+                    {% set valid_matches = round.matches|selectattr('home_team_id', 'ne', none)|selectattr('away_team_id', 'ne', none)|list %}
+                    {% if valid_matches %}
+                    <div class="match-grid">
+                        {% for match in valid_matches %}
+                            <div class="match-card">
+                                <div class="match-body">
+                                    <table class="match-table">
+                                        <tbody>
+                                            <tr>
+                                                <td style="width: 35%"></td>
+                                                <td class="leg-label" style="width: 20%">1st Leg</td>
+                                                <td class="leg-label" style="width: 20%">2nd Leg</td>
+                                                <td class="leg-label" style="width: 25%">Agg.</td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    {% if match.home_team %}
+                                                        <a href="{{ url_for('main.team_profile', team_id=match.home_team.id) }}" class="team-name fw-bold">
+                                                            {{ match.home_team.name }}
+                                                        </a>
+                                                    {% else %}
+                                                        <span class="team-name fw-bold text-muted">TBD</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if match.first_leg_complete %}
+                                                        <span class="score-badge">{{ "%.2f"|format(match.first_leg_home_score) }}</span>
+                                                    {% else %}
+                                                        <span class="score-badge">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if match.second_leg_complete %}
+                                                        <span class="score-badge">{{ "%.2f"|format(match.second_leg_home_score) }}</span>
+                                                    {% else %}
+                                                        <span class="score-badge">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if match.first_leg_complete %}
+                                                        <span class="score-badge fw-bold">{{ "%.2f"|format(match.aggregate_home_score) }}</span>
+                                                    {% else %}
+                                                        <span class="score-badge">-</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    {% if match.away_team %}
+                                                        <a href="{{ url_for('main.team_profile', team_id=match.away_team.id) }}" class="team-name fw-bold">
+                                                            {{ match.away_team.name }}
+                                                        </a>
+                                                    {% else %}
+                                                        <span class="team-name fw-bold text-muted">TBD</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if match.first_leg_complete %}
+                                                        <span class="score-badge">{{ "%.2f"|format(match.first_leg_away_score) }}</span>
+                                                    {% else %}
+                                                        <span class="score-badge">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if match.second_leg_complete %}
+                                                        <span class="score-badge">{{ "%.2f"|format(match.second_leg_away_score) }}</span>
+                                                    {% else %}
+                                                        <span class="score-badge">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if match.first_leg_complete %}
+                                                        <span class="score-badge fw-bold">{{ "%.2f"|format(match.aggregate_away_score) }}</span>
+                                                    {% else %}
+                                                        <span class="score-badge">-</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                        <p class="text-muted">Teams have not been assigned to this round yet.</p>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted">No matches scheduled yet.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    <!-- No Data Messages -->
+    {% if not cup %}
+        <div class="alert alert-info">
+            {% if not selected_season %}
+                Please select a season to view cup competitions.
+            {% else %}
+                No cup competition found for the {{ selected_season.name }} season.
+            {% endif %}
+        </div>
+    {% elif cup and view_type == 'group_stage' and not groups %}
+        <div class="alert alert-info">
+            <h5><i class="fas fa-info-circle"></i> No Group Stage</h5>
+            <p class="mb-0">This cup competition uses a knockout format only. Please select "Knockout Stage" to view the matches.</p>
+        </div>
+    {% elif cup and view_type == 'knockout' and not cup.rounds %}
+        <div class="alert alert-info">
+            No knockout rounds have been created yet for this cup competition.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

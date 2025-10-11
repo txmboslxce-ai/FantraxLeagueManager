@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .display-4 {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 2rem;
+        font-weight: 500;
+    }
+
+    .card {
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid rgba(0,0,0,0.125);
+        padding: 0.75rem 1rem;
+    }
+
+    .card-header h2, .card-header h3 {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-weight: 500;
+        margin: 0;
+    }
+
+    .table {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.85rem;
+        margin-bottom: 0;
+    }
+
+    .table th {
+        font-weight: 500;
+        border-top: none;
+    }
+
+    .table td {
+        vertical-align: middle;
+    }
+
+    .btn {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.85rem;
+    }
+
+    .list-group-item {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.85rem;
+        border: none;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.25rem;
+        border-radius: 6px;
+        background-color: #f8f9fa;
+        transition: all 0.2s ease;
+    }
+
+    .list-group-item:hover {
+        background-color: #e9ecef;
+        transform: translateY(-1px);
+    }
+
+    .quick-links-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .quick-links-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="jumbotron text-center bg-light p-5 rounded-3 mb-4">
+    <h1 class="display-4">Fantrax Fantasy Premier League</h1>
+</div>
+
+{% if season %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="h4 mb-0">Current Season: {{ season.name }}</h2>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for division in divisions %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h3 class="h5 mb-0">{{ division.name }}</h3>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Team</th>
+                                            <th class="text-center">P</th>
+                                            <th class="text-center">Pts</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for team_season in (division.teams|sort(attribute='points', reverse=True))[:5] %}
+                                        <tr>
+                                            <td>{{ team_season.team.name }}</td>
+                                            <td class="text-center">{{ team_season.played_matches }}</td>
+                                            <td class="text-center">{{ team_season.points }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="card-footer text-center">
+                                <a href="{{ url_for('main.league_tables', season_id=season.id, division_id=division.id) }}" class="btn btn-sm btn-outline-primary">View Full Table</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <p class="mb-0">No active season found. Please contact the administrator to set up a new season.</p>
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="h4 mb-0">Quick Links</h2>
+            </div>
+            <div class="card-body">
+                <div class="quick-links-grid">
+                    <div class="list-group">
+                        <a href="{{ url_for('main.league_tables') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-table me-2"></i> League Tables
+                        </a>
+                        <a href="{{ url_for('main.results') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-calendar-check me-2"></i> Results
+                        </a>
+                        <a href="{{ url_for('main.fixtures') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-calendar-alt me-2"></i> Fixtures
+                        </a>
+                        <a href="{{ url_for('main.cups') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-trophy me-2"></i> Cup Competitions
+                        </a>
+                    </div>
+                    <div class="list-group">
+                        <a href="{{ url_for('main.manager_of_the_month') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-award me-2"></i> Manager of the Month
+                        </a>
+                        <a href="{{ url_for('main.teams') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-users me-2"></i> Teams
+                        </a>
+                        <a href="{{ url_for('main.rules') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-book me-2"></i> Rules
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

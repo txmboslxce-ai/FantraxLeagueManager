@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Admin</a></li>
+                <li class="breadcrumb-item active">Manage Seasons</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Create Season Form -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="h4 mb-0">Create Season</h2>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.name.label(class="form-label") }}
+                        {{ form.name(class="form-control") }}
+                        {% for error in form.name.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.start_date.label(class="form-label") }}
+                        {{ form.start_date(class="form-control") }}
+                        {% for error in form.start_date.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.end_date.label(class="form-label") }}
+                        {{ form.end_date(class="form-control") }}
+                        {% for error in form.end_date.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3 form-check">
+                        {{ form.is_current(class="form-check-input") }}
+                        {{ form.is_current.label(class="form-check-label") }}
+                        {% for error in form.is_current.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seasons List -->
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="h4 mb-0">Existing Seasons</h2>
+            </div>
+            <div class="card-body">
+                {% if seasons %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Season Name</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-center">Divisions</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for season in seasons %}
+                                <tr>
+                                    <td>{{ season.name }}</td>
+                                    <td>{{ season.start_date.strftime('%d/%m/%Y') }}</td>
+                                    <td>{{ season.end_date.strftime('%d/%m/%Y') }}</td>
+                                    <td class="text-center">
+                                        {% if season.is_current %}
+                                            <span class="badge bg-success">Current</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">{{ season.divisions|length }}</td>
+                                    <td class="text-end">
+                                        <a href="{{ url_for('admin.edit_season', season_id=season.id) }}" 
+                                           class="btn btn-sm btn-outline-primary me-2" 
+                                           title="Edit Season">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                title="Delete Season"
+                                                onclick="confirmDelete('{{ season.name }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No seasons created yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(seasonName) {
+    if (confirm('Are you sure you want to delete the season "' + seasonName + '"? This action cannot be undone.')) {
+        // TODO: Implement delete functionality
+        alert('Delete functionality not yet implemented');
+    }
+}
+</script>
+{% endblock %}

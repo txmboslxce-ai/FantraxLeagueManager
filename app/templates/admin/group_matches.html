@@ -1,0 +1,180 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+<h1>{{ title }}</h1>
+
+<div class="mb-3">
+    <a href="{{ url_for('admin.manage_cup_groups', cup_id=group.competition.id) }}" class="btn btn-secondary">← Back to Groups</a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ group.name }} Matches</h5>
+                {% if group.teams|length >= 2 %}
+                    <form method="POST" action="{{ url_for('admin.generate_group_matches', group_id=group.id) }}" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-success" 
+                                onclick="return confirm('Generate all possible matches for this group?')">
+                            Generate All Matches
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if group.matches %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Home Team</th>
+                                    <th>Away Team</th>
+                                    <th>Gameweek</th>
+                                    <th>Score</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for match in group.matches %}
+                                    <tr>
+                                        <td>{{ match.home_team.name }}</td>
+                                        <td>{{ match.away_team.name }}</td>
+                                        <td>
+                                            {% if match.gameweek %}
+                                                {{ match.gameweek.number }}
+                                            {% else %}
+                                                <span class="badge bg-warning">Not assigned</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if match.home_score is not none and match.away_score is not none %}
+                                                <span class="badge bg-success">
+                                                    {{ "%.1f"|format(match.home_score) }} - {{ "%.1f"|format(match.away_score) }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Not played</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="d-flex gap-1">
+                                                <a href="{{ url_for('admin.edit_group_match', match_id=match.id) }}" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    Edit
+                                                </a>
+                                                <form method="POST" action="{{ url_for('admin.delete_group_match', match_id=match.id) }}" class="d-inline">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                            onclick="return confirm('Delete this match?')">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No matches created yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if group.teams|length >= 2 %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Group Table</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Pos</th>
+                                    <th>Team</th>
+                                    <th>P</th>
+                                    <th>W</th>
+                                    <th>D</th>
+                                    <th>L</th>
+                                    <th>GF</th>
+                                    <th>GA</th>
+                                    <th>GD</th>
+                                    <th>Pts</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for team_stats in group.group_table %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ team_stats.team.name }}</td>
+                                        <td>{{ team_stats.played }}</td>
+                                        <td>{{ team_stats.won }}</td>
+                                        <td>{{ team_stats.drawn }}</td>
+                                        <td>{{ team_stats.lost }}</td>
+                                        <td>{{ "%.1f"|format(team_stats.goals_for) }}</td>
+                                        <td>{{ "%.1f"|format(team_stats.goals_against) }}</td>
+                                        <td>{{ "%.1f"|format(team_stats.goal_difference) }}</td>
+                                        <td><strong>{{ team_stats.points }}</strong></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Create New Match</h5>
+            </div>
+            <div class="card-body">
+                {% if group.teams|length >= 2 %}
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        <div class="form-group">
+                            {{ form.home_team_id.label(class="form-label") }}
+                            {{ form.home_team_id(class="form-control") }}
+                        </div>
+                        <div class="form-group mt-2">
+                            {{ form.away_team_id.label(class="form-label") }}
+                            {{ form.away_team_id(class="form-control") }}
+                        </div>
+                        <div class="form-group mt-2">
+                            {{ form.gameweek_id.label(class="form-label") }}
+                            {{ form.gameweek_id(class="form-control") }}
+                        </div>
+                        <div class="mt-3">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        You need at least 2 teams in the group to create matches.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if group.teams|length == group.competition.teams_per_group %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">
+                        In a group of {{ group.competition.teams_per_group }}, each team should play {{ group.competition.teams_per_group - 1 }} matches.
+                        Total matches needed: {{ (group.competition.teams_per_group * (group.competition.teams_per_group - 1)) // 2 }}
+                    </p>
+                    <p class="small">
+                        Current matches: {{ group.matches|length }}
+                    </p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>{{ title }}</h1>
+    
+    <!-- Create Round Form -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Create New Round</h2>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            {{ form.name.label }}
+                            {{ form.name(class="form-control") }}
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            {{ form.order.label }}
+                            {{ form.order(class="form-control") }}
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            {{ form.num_matches.label }}
+                            {{ form.num_matches(class="form-control") }}
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            {{ form.first_leg_gameweek_id.label }}
+                            {{ form.first_leg_gameweek_id(class="form-control") }}
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            {{ form.second_leg_gameweek_id.label }}
+                            {{ form.second_leg_gameweek_id(class="form-control") }}
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Existing Rounds -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Existing Rounds</h2>
+        </div>
+        <div class="card-body">
+            {% if rounds %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Round</th>
+                                <th>Order</th>
+                                <th>Matches</th>
+                                <th>First Leg</th>
+                                <th>Second Leg</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for round in rounds %}
+                            <tr>
+                                <td>{{ round.name }}</td>
+                                <td>{{ round.order }}</td>
+                                <td>{{ round.num_matches }}</td>
+                                <td>GW {{ round.first_leg_gameweek.number if round.first_leg_gameweek else 'Not Set' }}</td>
+                                <td>GW {{ round.second_leg_gameweek.number if round.second_leg_gameweek else 'Not Set' }}</td>
+                                <td>
+                                    {% if round.is_complete %}
+                                        <span class="badge bg-success">Complete</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">In Progress</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('admin.manage_cup_matches', round_id=round.id) }}" class="btn btn-sm btn-primary">
+                                        Manage Matches
+                                    </a>
+                                    <a href="{{ url_for('admin.edit_cup_round', round_id=round.id) }}" class="btn btn-sm btn-secondary ms-1">
+                                        Edit
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted mb-0">No rounds created yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

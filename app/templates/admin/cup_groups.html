@@ -1,0 +1,164 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+<h1>{{ title }}</h1>
+
+<div class="mb-3">
+    <a href="{{ url_for('admin.manage_cups') }}" class="btn btn-secondary">← Back to Cups</a>
+</div>
+
+<div class="row">
+    {% for group in groups %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ group.name }}</h5>
+                    <span class="badge bg-primary">{{ group.teams|length }}/{{ cup.teams_per_group }} teams</span>
+                </div>
+                <div class="card-body">
+                    {% if group.teams %}
+                        <ul class="list-unstyled mb-3">
+                            {% for team_entry in group.teams %}
+                                <li class="mb-1">
+                                    <i class="fas fa-users"></i> {{ team_entry.team.name }}
+                                    <small class="text-muted">({{ team_entry.team.manager_name }})</small>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-3">No teams assigned</p>
+                    {% endif %}
+                    
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('admin.manage_group_teams', group_id=group.id) }}" 
+                           class="btn btn-sm btn-outline-primary">
+                            Manage Teams
+                        </a>
+                        {% if group.teams|length >= 2 %}
+                            <a href="{{ url_for('admin.manage_group_matches', group_id=group.id) }}" 
+                               class="btn btn-sm btn-outline-success">
+                                Manage Matches
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if group.teams|length >= 2 %}
+                    <div class="card-footer">
+                        <small class="text-muted">
+                            Matches: {{ group.matches|length }}
+                            {% if group.matches %}
+                                | Completed: {{ group.matches|selectattr('home_score', 'ne', none)|list|length }}
+                            {% endif %}
+                        </small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+{% if groups and groups|selectattr('teams')|list|length >= 2 %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Group Tables</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for group in groups %}
+                    {% if group.teams|length >= 2 %}
+                        <div class="col-md-6 mb-4">
+                            <h6>{{ group.name }}</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Team</th>
+                                            <th>P</th>
+                                            <th>W</th>
+                                            <th>D</th>
+                                            <th>L</th>
+                                            <th>GF</th>
+                                            <th>GA</th>
+                                            <th>GD</th>
+                                            <th>Pts</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for team_stats in group.group_table %}
+                                            <tr{% if loop.index == 1 %} class="table-success"{% elif loop.index == 2 %} class="table-warning"{% elif loop.index == 3 %} class="table-danger"{% endif %}>
+                                                <td>{{ team_stats.team.name }}</td>
+                                                <td>{{ team_stats.played }}</td>
+                                                <td>{{ team_stats.won }}</td>
+                                                <td>{{ team_stats.drawn }}</td>
+                                                <td>{{ team_stats.lost }}</td>
+                                                <td>{{ "%.1f"|format(team_stats.goals_for) }}</td>
+                                                <td>{{ "%.1f"|format(team_stats.goals_against) }}</td>
+                                                <td>{{ "%.1f"|format(team_stats.goal_difference) }}</td>
+                                                <td><strong>{{ team_stats.points }}</strong></td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <small class="text-muted">
+                                <span class="badge bg-success">1st</span> Group Winner
+                                <span class="badge bg-warning">2nd</span> Runner-up
+                                <span class="badge bg-danger">3rd</span> Eliminated
+                            </small>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+{% if group_stage_complete %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Knockout Stage Qualification</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-success">Direct to Round of 16</h6>
+                    <p class="text-muted small">Top 8 Group Winners (by points, then goals for)</p>
+                    <div class="list-group">
+                        {% for qualifier in direct_qualifiers %}
+                            <div class="list-group-item">
+                                <strong>{{ qualifier.team.name }}</strong>
+                                <small class="text-muted">({{ qualifier.group.name }} - {{ qualifier.points }} pts, {{ "%.1f"|format(qualifier.goals_for) }} GF)</small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h6 class="text-warning">Playoff Round</h6>
+                    <p class="text-muted small">Bottom 4 Group Winners + All Second Place Teams</p>
+                    <div class="list-group">
+                        {% for team in playoff_teams %}
+                            <div class="list-group-item">
+                                <strong>{{ team.team.name }}</strong>
+                                <small class="text-muted">
+                                    ({{ team.group.name }} {{ team.position|default('Bottom 4 Winner') }} - {{ team.points }} pts, {{ "%.1f"|format(team.goals_for) }} GF)
+                                </small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4 text-center">
+                <a href="{{ url_for('admin.manage_cup_rounds', cup_id=cup.id) }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-right"></i> Set Up Knockout Rounds
+                </a>
+                <p class="text-muted small mt-2">
+                    Use the traditional round management to create playoff round and Round of 16
+                </p>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
