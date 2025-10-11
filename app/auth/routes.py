@@ -13,14 +13,22 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
-        if user is None or not user.check_password(form.password.data):
-            flash('Invalid username or password', 'danger')
-            return redirect(url_for('auth.login'))
-        login_user(user, remember=form.remember_me.data)
-        next_page = request.args.get('next')
-        if not next_page or urlparse(next_page).netloc != '':
-            next_page = url_for('main.index')
-        return redirect(next_page)
+        print(f"Login attempt for username: {form.username.data}")
+        if user:
+            print(f"User found, checking password...")
+            if user.check_password(form.password.data):
+                print(f"Password correct, logging in user")
+                login_user(user, remember=form.remember_me.data)
+                next_page = request.args.get('next')
+                if not next_page or urlparse(next_page).netloc != '':
+                    next_page = url_for('main.index')
+                return redirect(next_page)
+            else:
+                print(f"Password incorrect")
+        else:
+            print(f"User not found")
+        flash('Invalid username or password', 'danger')
+        return redirect(url_for('auth.login'))
     return render_template('auth/login.html', title='Sign In', form=form)
 
 @bp.route('/logout')
