@@ -8,9 +8,13 @@ services:
       pip install --upgrade pip
       pip install -r requirements.txt
       export FLASK_APP=run.py
-      flask db upgrade
+      export FLASK_DEBUG=0
+      # Ensure the migrations directory exists and is up to date
+      flask db upgrade head
+      # Initialize the database with required data
       python init_production_db.py
-      python -c "from app import create_app, db; from app.models import User; app = create_app(); app.app_context().push(); admin = User.query.filter_by(username='admin').first(); admin.set_password('admin123') if admin else None; db.session.commit()"
+      # Set up the admin user
+      python -c "from app import create_app, db; from app.models import User; app = create_app(); with app.app_context(): admin = User.query.filter_by(username='admin').first(); admin.set_password('admin123') if admin else db.session.add(User(username='admin', email='admin@example.com', password_hash='placeholder', is_admin=True)); db.session.commit()"
     startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --log-level debug
     envVars:
       - key: PYTHON_VERSION
