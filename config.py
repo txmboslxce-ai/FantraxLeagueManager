@@ -6,20 +6,16 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-key-please-change-in-production'
     
-    # Handle potential postgres:// URLs from Render
-    database_url = os.environ.get('DATABASE_URL')
-    if database_url and database_url.startswith('postgres://'):
-        database_url = database_url.replace('postgres://', 'postgresql://', 1)
-    
-    SQLALCHEMY_DATABASE_URI = database_url or \
-        'sqlite:///' + os.path.join('/opt/render/project/src', 'fantasy_league.db')
+    # Always use SQLite
+    db_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fantasy_league.db')
+    SQLALCHEMY_DATABASE_URI = f'sqlite:///{db_path}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=60)
     
     @staticmethod
     def init_app(app):
-        if not os.path.exists('/opt/render/project/src'):
-            os.makedirs('/opt/render/project/src', exist_ok=True)
+        # Ensure the instance folder exists
+        os.makedirs(os.path.dirname(Config.SQLALCHEMY_DATABASE_URI.replace('sqlite:///', '')), exist_ok=True)
     
 class DevelopmentConfig(Config):
     DEBUG = True
