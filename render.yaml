@@ -6,9 +6,10 @@ services:
       python -m venv .venv
       source .venv/bin/activate
       pip install --upgrade pip
+      mkdir -p /opt/render/project/src
       pip install -r requirements.txt
       python init_production_db.py
-    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 4 --access-logfile -
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 1 --log-level debug
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.8
@@ -25,9 +26,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        value: sqlite:////opt/render/project/src/fantasy_league.db
+        value: sqlite:///fantasy_league.db
+      - key: SQLALCHEMY_TRACK_MODIFICATIONS
+        value: "false"
     python_version: "3.11.8"
-    disk:
-      name: sqlite
-      mountPath: /opt/render/project/src
-      sizeGB: 1
