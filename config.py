@@ -10,15 +10,14 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=60)
     
-    # Set up the database path
+    # Set up the database URI
     if os.environ.get('RENDER'):
-        # On Render.com, use a path in the persistent disk
-        db_path = '/opt/render/project/src/fantasy_league.db'
+        # On Render.com, use NeonDB
+        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     else:
         # Local development
         db_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fantasy_league.db')
-    
-    SQLALCHEMY_DATABASE_URI = f'sqlite:///{db_path}'
+        SQLALCHEMY_DATABASE_URI = f'sqlite:///{db_path}'
     
     @staticmethod
     def init_app(app):

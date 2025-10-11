@@ -7,8 +7,10 @@ services:
       source .venv/bin/activate
       pip install --upgrade pip
       pip install -r requirements.txt
+      pip install psycopg2-binary
       export FLASK_APP=run.py
       export FLASK_ENV=production
+      flask db upgrade
     startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --log-level debug
     envVars:
       - key: PYTHON_VERSION
@@ -19,6 +21,8 @@ services:
         value: production
       - key: SECRET_KEY
         generateValue: true
+      - key: DATABASE_URL
+        sync: false # This will preserve the value set in the dashboard
     disk:
       name: data
       mountPath: /opt/render/project/src
