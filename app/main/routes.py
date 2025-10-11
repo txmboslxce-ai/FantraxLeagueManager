@@ -273,26 +273,47 @@ def cups():
     
     if selected_season:
         # Find all cups for the season, ordered by id to ensure consistency
-        cups = CupCompetition.query.filter_by(season_id=selected_season.id).order_by(CupCompetition.id).all()
-        cup = cups[0] if cups else None
+        cup = CupCompetition.query.filter_by(
+            season_id=selected_season.id
+        ).options(
+            db.joinedload(CupCompetition.rounds).joinedload(CupRound.matches),
+            db.joinedload(CupCompetition.groups).joinedload(CupGroup.matches)
+        ).first()
         
         if cup:
             # Auto-switch to knockout view for previous seasons without groups
-            if not cup.has_groups and view_type == 'group_stage' and not selected_season.is_current:
+            if not cup.has_groups and view_type == 'group_stage':
                 view_type = 'knockout'
             
-            # Ensure all cup data is loaded
-            if not selected_season.is_current:
-                # For past seasons, eagerly load all cup-related data
-                for round in cup.rounds:
-                    db.session.query(CupMatch).filter_by(round_id=round.id).all()
+            # Load all rounds and their matches
+            rounds = CupRound.query.filter_by(competition_id=cup.id).order_by(CupRound.order).all()
             
-            groups = None
-            rounds = None
-            all_rounds = None
-            selected_round_id = None
+            # For each round, load its matches with team data
+            for round in rounds:
+                matches = CupMatch.query.filter_by(round_id=round.id).all()
+                # Force load of team data
+                for match in matches:
+                    if match.home_team_id:
+                        _ = match.home_team.name
+                    if match.away_team_id:
+                        _ = match.away_team.name
+                    if match.winner_id:
+                        _ = match.winner.name
             
-            if cup.has_groups and view_type == 'group_stage':
+            # Load all groups and their matches if this is a group stage cup
+            if cup.has_groups:
+                groups = CupGroup.query.filter_by(competition_id=cup.id).order_by(CupGroup.order).all()
+                for group in groups:
+                    matches = CupGroupMatch.query.filter_by(group_id=group.id).all()
+                    # Force load of team data
+                    for match in matches:
+                        if match.home_team_id:
+                            _ = match.home_team.name
+                        if match.away_team_id:
+                            _ = match.away_team.name
+            
+            # Prepare data for template based on view type
+            if view_type == 'group_stage' and cup.has_groups:
                 # Group stage view
                 groups = CupGroup.query.filter_by(competition_id=cup.id).order_by(CupGroup.order).all()
                 
@@ -302,27 +323,46 @@ def cups():
                         match.update_scores_from_fixtures()
                 db.session.commit()
                 
-            elif view_type == 'knockout':
-                # Knockout stage view (existing logic)
+                return render_template(
+                    'main/cups.html',
+                    title='Cup Competition',
+                    seasons=all_seasons,
+                    selected_season=selected_season,
+                    cup=cup,
+                    view_type=view_type,
+                    groups=groups
+                )
+                
+            else:
+                # Knockout stage view
                 all_rounds = CupRound.query.filter_by(
                     competition_id=cup.id
                 ).order_by(CupRound.order).all()
                 
                 selected_round_id = request.args.get('round_id', type=int)
-                if selected_round_id:
-                    rounds = [CupRound.query.get_or_404(selected_round_id)]
-                else:
-                    rounds = all_rounds
+                rounds = [CupRound.query.get_or_404(selected_round_id)] if selected_round_id else all_rounds
                 
-                # ── AUTO-SYNC SCORES ───────────────────────────────────
-                for rnd in rounds:
-                    # Only process matches that have teams assigned
-                    valid_matches = [match for match in rnd.matches if match.home_team_id and match.away_team_id]
-                    for match in valid_matches:
-                        # clear out any stale values
-                        match.first_leg_home_score  = None
-                        match.first_leg_away_score  = None
-                        match.second_leg_home_score = None
+                return render_template(
+                    'main/cups.html',
+                    title='Cup Competition',
+                    seasons=all_seasons,
+                    selected_season=selected_season,
+                    cup=cup,
+                    view_type='knockout',
+                    rounds=rounds,
+                    all_rounds=all_rounds,
+                    selected_round_id=selected_round_id
+                )
+                
+    # If we get here, either no season or no cup was found
+    return render_template(
+        'main/cups.html',
+        title='Cup Competition',
+        seasons=all_seasons,
+        selected_season=selected_season,
+        cup=None,
+        message=f"No cup competition found for the {selected_season.name if selected_season else 'current'} season."
+    )
                         match.second_leg_away_score = None
                         # re-pull from the Fixture table based on the assigned gameweeks
                         match.update_scores_from_fixtures()
