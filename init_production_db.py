@@ -12,12 +12,27 @@ from datetime import datetime, date
 
 def init_database():
     """Initialize the database with essential data if it doesn't exist."""
-    
-    # Create all tables
-    db.create_all()
-    
-    # Check if we have a current season
-    current_season = Season.query.filter_by(is_current=True).first()
+    try:
+        # Create all tables
+        db.create_all()
+        
+        # Check if we have a current season
+        current_season = Season.query.filter_by(is_current=True).first()
+        
+        if not current_season:
+            # Create a default season for 2025/26
+            new_season = Season(
+                name="2025/26",
+                start_date=date(2025, 8, 1),
+                end_date=date(2026, 5, 31),
+                is_current=True
+            )
+            db.session.add(new_season)
+            db.session.commit()
+            print("Created default season 2025/26")
+    except Exception as e:
+        print(f"Error initializing database: {e}")
+        raise
     
     if not current_season:
         print("No current season found. Creating default season...")
