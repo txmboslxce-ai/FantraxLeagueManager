@@ -1,14 +1,24 @@
 services:
   - type: web
     name: fantrax-league-manager
-    env: python
-    buildCommand: pip install -r requirements.txt
+    runtime: python
+    buildCommand: |
+      python -m venv .venv
+      source .venv/bin/activate
+      pip install --upgrade pip
+      pip install -r requirements.txt
     startCommand: gunicorn wsgi:app
-    pythonVersion: 3.11.8
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.8
+      - key: PATH
+        value: /opt/render/project/src/.venv/bin:$PATH
+      - key: PYTHONPATH
+        value: /opt/render/project/src
       - key: FLASK_APP
         value: run.py
       - key: FLASK_ENV
         value: production
+      - key: FLASK_DEBUG
+        value: "0"
+    python_version: "3.11.8"
