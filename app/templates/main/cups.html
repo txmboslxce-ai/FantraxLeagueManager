@@ -308,7 +308,7 @@
                 <div class="flex-grow-1">
                     <select name="season_id" class="form-select" onchange="this.form.submit()">
                         <option value="">Select Season</option>
-                        {% for season in all_seasons %}
+                        {% for season in seasons %}
                             <option value="{{ season.id }}" {% if selected_season and selected_season.id == season.id %}selected{% endif %}>
                                 {{ season.name }}
                             </option>

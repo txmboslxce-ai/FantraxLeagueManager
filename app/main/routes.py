@@ -257,7 +257,7 @@ def fixtures():
 @bp.route('/cups')
 def cups():
     # Get all seasons for the dropdown
-    all_seasons = Season.query.order_by(Season.start_date.desc()).all()
+    seasons = Season.query.order_by(Season.start_date.desc()).all()
     
     # Get selected season from query params, default to current season
     selected_season_id = request.args.get('season_id', type=int)
@@ -265,8 +265,8 @@ def cups():
         selected_season = Season.query.get_or_404(selected_season_id)
     else:
         selected_season = Season.query.filter_by(is_current=True).first()
-        if not selected_season and all_seasons:
-            selected_season = all_seasons[0]
+        if not selected_season and seasons:
+            selected_season = seasons[0]
     
     # Get view type (group_stage or knockout)
     view_type = request.args.get('view', 'group_stage')
@@ -275,7 +275,7 @@ def cups():
         return render_template(
             'main/cups.html',
             title='Cup Competition',
-            seasons=all_seasons,
+            seasons=seasons,
             selected_season=None,
             cup=None,
             view_type=view_type,
@@ -292,7 +292,7 @@ def cups():
         return render_template(
             'main/cups.html',
             title='Cup Competition',
-            seasons=all_seasons,
+            seasons=seasons,
             selected_season=selected_season,
             cup=None,
             view_type=view_type,
@@ -318,7 +318,7 @@ def cups():
         return render_template(
             'main/cups.html',
             title='Cup Competition',
-            seasons=all_seasons,
+            seasons=seasons,
             selected_season=selected_season,
             cup=cup,
             view_type=view_type,
@@ -342,7 +342,7 @@ def cups():
         return render_template(
             'main/cups.html',
             title='Cup Competition',
-            seasons=all_seasons,
+            seasons=seasons,
             selected_season=selected_season,
             cup=cup,
             view_type='knockout',
