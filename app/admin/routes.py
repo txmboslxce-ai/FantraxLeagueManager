@@ -314,11 +314,34 @@ def upload_scores():
                 if not score_line.strip():
                     continue
                     
-                parts = [p.strip() for p in score_line.split('\t')]
-                if len(parts) != 4:
+                # Split by any whitespace and get non-empty parts
+                parts = [p for p in score_line.split() if p.strip()]
+                if len(parts) < 4:
                     flash(f'Invalid line format: {score_line}', 'danger')
                     error_count += 1
                     continue
+                
+                # First part up until the score is home team name
+                home_score_idx = -1
+                for i, part in enumerate(parts):
+                    try:
+                        float(part)
+                        home_score_idx = i
+                        break
+                    except ValueError:
+                        continue
+                
+                if home_score_idx == -1:
+                    flash(f'Could not find home score in line: {score_line}', 'danger')
+                    error_count += 1
+                    continue
+                    
+                # Last part is away score
+                # Second to last part up until after home score is away team
+                home_team_name = ' '.join(parts[:home_score_idx])
+                home_score = parts[home_score_idx]
+                away_team_name = ' '.join(parts[home_score_idx+1:-1])
+                away_score = parts[-1]
                     
                 home_team_name, home_score, away_team_name, away_score = parts
                 
@@ -365,8 +388,9 @@ def upload_scores():
                     continue
                 
                 try:
-                    home_score = int(home_score)
-                    away_score = int(away_score)
+                    # Convert scores to float since they can be decimals
+                    home_score = float(home_score)
+                    away_score = float(away_score)
                 except ValueError:
                     flash(f'Invalid score format in line: {score_line}', 'danger')
                     error_count += 1
