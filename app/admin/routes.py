@@ -65,13 +65,18 @@ def manage_teams():
             db.session.flush()  # Get the team ID
             
             # Create TeamSeason relationship
+            # Get next available ID for team_season
+            result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM team_season"))
+            next_team_season_id = result.scalar()
+            
             team_season = TeamSeason(
+                id=next_team_season_id,
                 team_id=team.id,
                 season_id=current_season.id,
                 division_id=form.division_id.data,
                 points=0,
                 total_score=0,
-                position=None  # Position will be set when the season ends
+                position=0  # Initialize with 0 instead of None
             )
             db.session.add(team_season)
             db.session.commit()
