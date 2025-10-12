@@ -322,24 +322,39 @@ def upload_scores():
                     
                 home_team_name, home_score, away_team_name, away_score = parts
                 
-                # For score uploads, we need to look up teams by exact name since these are coming from fixtures
-                # Find the fixture first, then we'll have the correct teams
-                fixture = Fixture.query.filter_by(
+                # Get all fixtures for this gameweek and division first
+                fixtures = Fixture.query.filter_by(
                     gameweek_id=form.gameweek.data,
                     division_id=form.division.data
-                ).join(
-                    Team, 
-                    ((Fixture.home_team_id == Team.id) & (Team.name == home_team_name)) |
-                    ((Fixture.away_team_id == Team.id) & (Team.name == away_team_name))
-                ).first()
+                ).all()
+                
+                print(f"\nLooking for: {home_team_name} vs {away_team_name}")
+                print(f"Gameweek ID: {form.gameweek.data}, Division ID: {form.division.data}")
+                print(f"Found {len(fixtures)} fixtures for this gameweek/division")
+                
+                # Get all teams to create a name lookup
+                all_teams = {team.id: team for team in Team.query.all()}
+                print("\nAll teams in database:")
+                for team_id, team in all_teams.items():
+                    print(f"ID: {team_id}, Name: {team.name}")
+                
+                # Find the matching fixture
+                fixture = None
+                for f in fixtures:
+                    home_team = all_teams.get(f.home_team_id)
+                    away_team = all_teams.get(f.away_team_id)
+                    if (home_team and away_team and 
+                        home_team.name == home_team_name and 
+                        away_team.name == away_team_name):
+                        fixture = f
+                        break
                 
                 if not fixture:
-                    flash(f'Could not find fixture for: {home_team_name} vs {away_team_name}', 'danger')
+                    flash(f'Could not find fixture for: {home_team_name} vs {away_team_name} in gameweek {form.gameweek.data}', 'danger')
                     error_count += 1
                     continue
-                    
-                home_team = Team.query.get(fixture.home_team_id)
-                away_team = Team.query.get(fixture.away_team_id)
+                
+                # We already have home_team and away_team from the loop above
                 
                 if not home_team or not away_team:
                     if not home_team:
