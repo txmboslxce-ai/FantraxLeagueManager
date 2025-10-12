@@ -306,8 +306,18 @@ def upload_scores():
     
     if form.validate_on_submit():
         try:
-            # Process scores upload
-            scores = form.scores_text.data.strip().split('\n')
+            print("\nDEBUG INFO:")
+            print(f"Raw form data: {form.scores_text.data}")
+            print("\nForm validation:")
+            print(f"Gameweek ID: {form.gameweek.data}")
+            print(f"Division ID: {form.division.data}")
+            
+            # Process scores upload - first split into lines
+            scores = [line for line in form.scores_text.data.strip().splitlines() if line.strip()]
+            print(f"\nProcessing {len(scores)} lines:")
+            for i, line in enumerate(scores, 1):
+                print(f"\nLine {i}: '{line}'")
+            
             success_count = 0
             error_count = 0
             
@@ -326,8 +336,6 @@ def upload_scores():
                 home_score = parts[1]
                 away_team_name = parts[2]
                 away_score = parts[3]
-                    
-                home_team_name, home_score, away_team_name, away_score = parts
                 
                 # Get all fixtures for this gameweek and division first
                 fixtures = Fixture.query.filter_by(
@@ -350,10 +358,19 @@ def upload_scores():
                 for f in fixtures:
                     home_team = all_teams.get(f.home_team_id)
                     away_team = all_teams.get(f.away_team_id)
+                    
+                    # Print debug info for each fixture comparison
+                    print(f"\nComparing fixture:")
+                    print(f"Looking for: '{home_team_name}' vs '{away_team_name}'")
+                    if home_team and away_team:
+                        print(f"Checking against: '{home_team.name}' vs '{away_team.name}'")
+                        print(f"Exact match? Home: {home_team.name == home_team_name}, Away: {away_team.name == away_team_name}")
+                    
                     if (home_team and away_team and 
-                        home_team.name == home_team_name and 
-                        away_team.name == away_team_name):
+                        home_team.name.strip() == home_team_name.strip() and 
+                        away_team.name.strip() == away_team_name.strip()):
                         fixture = f
+                        print("MATCH FOUND!")
                         break
                 
                 if not fixture:
