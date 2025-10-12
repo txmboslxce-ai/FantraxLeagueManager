@@ -211,51 +211,36 @@ def manage_fixtures():
                         error_count += 1
                         continue
 
+                    # Get the next available ID
                     try:
-                        # Get the next available ID manually
                         result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM fixture"))
                         next_id = result.scalar()
                         
-                        # Create fixture with explicit ID
-                    try:
-                        # Start a nested transaction
-                        with db.session.begin_nested():
-                            # Get the next available ID
-                            result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM fixture"))
-                            next_id = result.scalar()
-                            
-                            # Log the ID we're about to use
-                            current_app.logger.info(f"Creating fixture with ID: {next_id}")
-                            
-                            # Create and add the fixture with explicit ID
-                            fixture = Fixture(
-                                id=next_id,
-                                gameweek_id=correct_gameweek.id,
-                                home_team_id=home_team.id,
-                                away_team_id=away_team.id,
-                                division_id=form.division_id.data
-                            )
-                            db.session.add(fixture)
-                            
-                            # Flush to ensure the insert works
-                            db.session.flush()
-                            success_count += 1
-                            
+                        # Create the new fixture
+                        fixture = Fixture(
+                            id=next_id,
+                            gameweek_id=correct_gameweek.id,
+                            home_team_id=home_team.id,
+                            away_team_id=away_team.id,
+                            division_id=form.division_id.data
+                        )
+                        
+                        # Add and flush to ensure it works
+                        db.session.add(fixture)
+                        db.session.flush()
+                        
+                        # Log success
+                        current_app.logger.info(f"Created fixture with ID: {next_id}")
+                        success_count += 1
+                        
                     except Exception as e:
                         error_msg = f'Error creating fixture: {str(e)}'
                         current_app.logger.error(error_msg)
-                        current_app.logger.error(traceback.format_exc())  # Log full traceback
+                        current_app.logger.error(traceback.format_exc())
                         db.session.rollback()
                         flash(error_msg, 'danger')
                         error_count += 1
                         continue
-
-                except ValueError as e:
-                    error_msg = f'Invalid gameweek number in line: {fixture_line}'
-                    log_error(e, error_msg)
-                    flash(error_msg, 'danger')
-                    error_count += 1
-                    continue
 
             if success_count > 0:
                 try:
