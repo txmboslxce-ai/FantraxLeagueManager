@@ -109,9 +109,6 @@ def manage_fixtures():
     success_count = 0
     error_count = 0
 
-    if not form.validate_on_submit():
-        return render_template('admin/fixtures.html', form=form, fixtures=fixtures)
-        
     # Get current season
     current_season = Season.query.filter_by(is_current=True).first()
     if not current_season:
@@ -124,7 +121,11 @@ def manage_fixtures():
         flash("No divisions found for the current season. Please create a division first.", 'warning')
         return redirect(url_for('admin.manage_divisions'))
         
+    # Set up division choices before form validation
     form.division_id.choices = [(d.id, d.name) for d in divisions]
+
+    if not form.validate_on_submit():
+        return render_template('admin/fixtures.html', form=form, fixtures=fixtures)
     
     # Check division selection
     if not form.division_id.data:
