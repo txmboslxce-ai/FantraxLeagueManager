@@ -8,6 +8,12 @@ from app.models import Season, Division, Gameweek, Team, Fixture
 from app.utils import normalize_team_name
 import traceback
 
+@bp.route('/dashboard')
+@login_required
+@admin_required
+def dashboard():
+    return render_template('admin/dashboard.html')
+
 @bp.route('/fixtures', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -154,23 +160,18 @@ def manage_fixtures():
             if success_count > 0:
                 try:
                     db.session.commit()
-                    flash(f'Successfully created {success_count} fixtures!', 'success')
+                    flash(f'Successfully added {success_count} fixtures.', 'success')
                 except Exception as e:
+                    error_msg = f'Error committing fixtures to database: {str(e)}'
+                    log_error(e, error_msg)
                     db.session.rollback()
-                    error_msg = f'Error saving fixtures: {str(e)}'
-                    log_error(e, "saving fixtures")
                     flash(error_msg, 'danger')
-            
+
             if error_count > 0:
-                flash(f'Failed to create {error_count} fixtures. Check the error messages above.', 'warning')
-        
-        fixtures = Fixture.query.join(Gameweek).filter(
-            Gameweek.season_id == current_season.id
-        ).order_by(Gameweek.number).all()
-    
+                flash(f'Failed to add {error_count} fixtures. Check the error messages above.', 'warning')
+
     except Exception as e:
-        error_msg = log_error(e, "unexpected error")
-        flash(f'An unexpected error occurred: {error_msg}', 'danger')
-    
-    return render_template('admin/fixtures.html', title='Manage Fixtures',
-                         form=form, fixtures=fixtures)
+        error_msg = log_error(e)
+        flash(error_msg, 'danger')
+        
+    return render_template('admin/fixtures.html', form=form, fixtures=fixtures)
