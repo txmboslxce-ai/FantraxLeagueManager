@@ -6,6 +6,7 @@ from app.admin.forms import BulkFixtureForm
 from app.admin.decorators import admin_required
 from app.models import Season, Division, Gameweek, Team, Fixture
 from app.utils import normalize_team_name
+from sqlalchemy import text
 import traceback
 
 @bp.route('/dashboard')
@@ -211,18 +212,39 @@ def manage_fixtures():
                         continue
 
                     try:
-                        fixture = Fixture(
-                            gameweek_id=correct_gameweek.id,
-                            home_team_id=home_team.id,
-                            away_team_id=away_team.id,
-                            division_id=form.division_id.data
-                        )
-                        db.session.add(fixture)
-                        db.session.flush()
-                        success_count += 1
+                        # Get the next available ID manually
+                        result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM fixture"))
+                        next_id = result.scalar()
+                        
+                        # Create fixture with explicit ID
+                    try:
+                        # Start a nested transaction
+                        with db.session.begin_nested():
+                            # Get the next available ID
+                            result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM fixture"))
+                            next_id = result.scalar()
+                            
+                            # Log the ID we're about to use
+                            current_app.logger.info(f"Creating fixture with ID: {next_id}")
+                            
+                            # Create and add the fixture with explicit ID
+                            fixture = Fixture(
+                                id=next_id,
+                                gameweek_id=correct_gameweek.id,
+                                home_team_id=home_team.id,
+                                away_team_id=away_team.id,
+                                division_id=form.division_id.data
+                            )
+                            db.session.add(fixture)
+                            
+                            # Flush to ensure the insert works
+                            db.session.flush()
+                            success_count += 1
+                            
                     except Exception as e:
                         error_msg = f'Error creating fixture: {str(e)}'
                         current_app.logger.error(error_msg)
+                        current_app.logger.error(traceback.format_exc())  # Log full traceback
                         db.session.rollback()
                         flash(error_msg, 'danger')
                         error_count += 1
