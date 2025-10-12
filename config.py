@@ -15,9 +15,18 @@ class Config:
         # On Render.com, use NeonDB with specific connection parameters
         SQLALCHEMY_DATABASE_URI = 'postgresql://neondb_owner:npg_rC8Pfz1cpGWd@ep-long-forest-aen4vm28-pooler.c-2.us-east-2.aws.neon.tech/neondb'
         SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_size': 5,
+            'max_overflow': 2,
+            'pool_timeout': 30,
+            'pool_recycle': 1800,
+            'pool_pre_ping': True,
             'connect_args': {
                 'sslmode': 'require',
-                'channel_binding': 'require'
+                'connect_timeout': 10,
+                'keepalives': 1,
+                'keepalives_idle': 30,
+                'keepalives_interval': 10,
+                'keepalives_count': 5
             }
         }
     else:
@@ -48,10 +57,3 @@ class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     WTF_CSRF_ENABLED = False
-
-config = {
-    'development': DevelopmentConfig,
-    'production': ProductionConfig,
-    'testing': TestingConfig,
-    'default': DevelopmentConfig
-} 
