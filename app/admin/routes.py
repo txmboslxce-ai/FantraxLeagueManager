@@ -9,6 +9,7 @@ from app.models import Season, Division, Gameweek, Team, Fixture, TeamSeason, Ti
 from app.utils import normalize_team_name
 from sqlalchemy import text
 import traceback
+import re
 
 @bp.route('/dashboard')
 @login_required
@@ -314,34 +315,17 @@ def upload_scores():
                 if not score_line.strip():
                     continue
                     
-                # Split by any whitespace and get non-empty parts
-                parts = [p for p in score_line.split() if p.strip()]
-                if len(parts) < 4:
-                    flash(f'Invalid line format: {score_line}', 'danger')
-                    error_count += 1
-                    continue
-                
-                # First part up until the score is home team name
-                home_score_idx = -1
-                for i, part in enumerate(parts):
-                    try:
-                        float(part)
-                        home_score_idx = i
-                        break
-                    except ValueError:
-                        continue
-                
-                if home_score_idx == -1:
-                    flash(f'Could not find home score in line: {score_line}', 'danger')
+                # Split on multiple spaces (2 or more)
+                parts = re.split(r'\s{2,}', score_line.strip())
+                if len(parts) != 4:
+                    flash(f'Invalid line format (expected 4 parts): {score_line}', 'danger')
                     error_count += 1
                     continue
                     
-                # Last part is away score
-                # Second to last part up until after home score is away team
-                home_team_name = ' '.join(parts[:home_score_idx])
-                home_score = parts[home_score_idx]
-                away_team_name = ' '.join(parts[home_score_idx+1:-1])
-                away_score = parts[-1]
+                home_team_name = parts[0]
+                home_score = parts[1]
+                away_team_name = parts[2]
+                away_score = parts[3]
                     
                 home_team_name, home_score, away_team_name, away_score = parts
                 
