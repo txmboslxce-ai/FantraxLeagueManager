@@ -322,9 +322,24 @@ def upload_scores():
                     
                 home_team_name, home_score, away_team_name, away_score = parts
                 
-                # Get the teams
-                home_team = Team.query.filter_by(name=home_team_name).first()
-                away_team = Team.query.filter_by(name=away_team_name).first()
+                # For score uploads, we need to look up teams by exact name since these are coming from fixtures
+                # Find the fixture first, then we'll have the correct teams
+                fixture = Fixture.query.filter_by(
+                    gameweek_id=form.gameweek.data,
+                    division_id=form.division.data
+                ).join(
+                    Team, 
+                    ((Fixture.home_team_id == Team.id) & (Team.name == home_team_name)) |
+                    ((Fixture.away_team_id == Team.id) & (Team.name == away_team_name))
+                ).first()
+                
+                if not fixture:
+                    flash(f'Could not find fixture for: {home_team_name} vs {away_team_name}', 'danger')
+                    error_count += 1
+                    continue
+                    
+                home_team = Team.query.get(fixture.home_team_id)
+                away_team = Team.query.get(fixture.away_team_id)
                 
                 if not home_team or not away_team:
                     if not home_team:
@@ -339,19 +354,6 @@ def upload_scores():
                     away_score = int(away_score)
                 except ValueError:
                     flash(f'Invalid score format in line: {score_line}', 'danger')
-                    error_count += 1
-                    continue
-                
-                # Find the fixture
-                fixture = Fixture.query.filter_by(
-                    gameweek_id=form.gameweek.data,
-                    division_id=form.division.data,
-                    home_team_id=home_team.id,
-                    away_team_id=away_team.id
-                ).first()
-                
-                if not fixture:
-                    flash(f'Could not find fixture: {home_team_name} vs {away_team_name}', 'danger')
                     error_count += 1
                     continue
                 
