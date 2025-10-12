@@ -258,13 +258,18 @@ def manage_fixtures():
             fixtures_text = form.fixtures_text.data.strip().split('\n')
             
             # Verify gameweeks exist
-            gameweeks = {gw.number: gw for gw in 
-                        Gameweek.query.filter_by(season_id=current_season.id).all()}
+            all_gameweeks = Gameweek.query.filter_by(season_id=current_season.id).all()
+            gameweeks = {gw.number: gw for gw in all_gameweeks}
+            
             if not gameweeks:
                 error_msg = "No gameweeks found for the current season."
                 log_error(error_msg)
                 flash(error_msg, 'danger')
                 return redirect(url_for('admin.manage_fixtures'))
+                
+            # Log available gameweeks
+            available_numbers = sorted([gw.number for gw in all_gameweeks])
+            current_app.logger.info(f'Available gameweek numbers: {available_numbers}')
 
             # Get all teams for lookup
             all_teams = {normalize_team_name(team.name): team for team in Team.query.all()}
@@ -285,12 +290,19 @@ def manage_fixtures():
 
                     try:
                         gameweek_number = int(parts[0])
+                        if gameweek_number < 1 or gameweek_number > 38:
+                            error_msg = f'Invalid gameweek number {gameweek_number}. Must be between 1 and 38.'
+                            log_error(error_msg)
+                            flash(error_msg, 'danger')
+                            error_count += 1
+                            continue
+
                         home_team_name = normalize_team_name(parts[1])
                         away_team_name = normalize_team_name(parts[2])
                         
                         gameweek = gameweeks.get(gameweek_number)
                         if not gameweek:
-                            error_msg = f'Could not find gameweek {gameweek_number}'
+                            error_msg = f'Could not find gameweek {gameweek_number} in the database. Available gameweeks: {sorted(gameweeks.keys())}'
                             log_error(error_msg)
                             flash(error_msg, 'danger')
                             error_count += 1
@@ -329,8 +341,17 @@ def manage_fixtures():
                         current_app.logger.info(f'Creating fixture: GW={gameweek.id}, Home={home_team.id}, Away={away_team.id}, Div={form.division_id.data}')
                         
                         try:
+                            # Find the correct gameweek by number
+                            correct_gameweek = gameweeks.get(gameweek_number)
+                            if not correct_gameweek:
+                                error_msg = f'Could not find gameweek number {gameweek_number}'
+                                log_error(error_msg)
+                                flash(error_msg, 'danger')
+                                error_count += 1
+                                continue
+
                             fixture = Fixture(
-                                gameweek_id=gameweek.id,
+                                gameweek_id=correct_gameweek.id,  # Use the correct gameweek's ID
                                 home_team_id=home_team.id,
                                 away_team_id=away_team.id,
                                 division_id=form.division_id.data
@@ -1233,6 +1254,10 @@ def end_season():
                 )
                 db.session.add(new_team_season)
         
+        # Delete any existing gameweeks for the new season
+        Gameweek.query.filter_by(season_id=new_season.id).delete()
+        
+        # Reset gameweek numbering for new season
         # Create 38 gameweeks for new season
         for week in range(1, 39):
             gameweek = Gameweek(
@@ -1242,6 +1267,9 @@ def end_season():
                 is_current=week == 1
             )
             db.session.add(gameweek)
+            
+        # Flush to ensure all gameweeks are created properly
+        db.session.flush()
         
         db.session.commit()
         flash(f'Season {current_season.name} has been ended and {new_season.name} has been created!', 'success')
