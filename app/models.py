@@ -262,7 +262,7 @@ class Gameweek(db.Model):
     fixtures = db.relationship('Fixture', backref='gameweek', lazy=True)
 
 class Fixture(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     gameweek_id = db.Column(db.Integer, db.ForeignKey('gameweek.id'), nullable=False)
     home_team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
     away_team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
