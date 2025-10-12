@@ -12,7 +12,49 @@ import traceback
 @login_required
 @admin_required
 def dashboard():
-    return render_template('admin/dashboard.html')
+    current_season = Season.query.filter_by(is_current=True).first()
+    return render_template('admin/dashboard.html', season=current_season)
+
+@bp.route('/seasons')
+@login_required
+@admin_required
+def manage_seasons():
+    seasons = Season.query.order_by(Season.start_date.desc()).all()
+    return render_template('admin/seasons.html', seasons=seasons)
+
+@bp.route('/divisions')
+@login_required
+@admin_required
+def manage_divisions():
+    current_season = Season.query.filter_by(is_current=True).first()
+    if not current_season:
+        flash('No current season found. Please create a season first.', 'warning')
+        return redirect(url_for('admin.manage_seasons'))
+        
+    divisions = Division.query.filter_by(season_id=current_season.id).all()
+    return render_template('admin/divisions.html', divisions=divisions, season=current_season)
+
+@bp.route('/teams')
+@login_required
+@admin_required
+def manage_teams():
+    current_season = Season.query.filter_by(is_current=True).first()
+    if not current_season:
+        flash('No current season found. Please create a season first.', 'warning')
+        return redirect(url_for('admin.manage_seasons'))
+        
+    teams = Team.query.all()
+    return render_template('admin/teams.html', teams=teams)
+
+@bp.route('/end-season')
+@login_required
+@admin_required
+def end_season():
+    current_season = Season.query.filter_by(is_current=True).first()
+    if not current_season:
+        flash('No current season found.', 'warning')
+        return redirect(url_for('admin.manage_seasons'))
+    return render_template('admin/end_season.html', season=current_season)
 
 @bp.route('/fixtures', methods=['GET', 'POST'])
 @login_required
