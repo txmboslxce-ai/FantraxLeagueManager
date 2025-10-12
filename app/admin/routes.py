@@ -2,9 +2,9 @@ from flask import render_template, flash, redirect, url_for, current_app, reques
 from flask_login import login_required
 from app import db
 from app.admin import bp
-from app.admin.forms import BulkFixtureForm, DivisionForm, TeamForm
+from app.admin.forms import BulkFixtureForm, DivisionForm, TeamForm, EndSeasonForm, TitleForm
 from app.admin.decorators import admin_required
-from app.models import Season, Division, Gameweek, Team, Fixture
+from app.models import Season, Division, Gameweek, Team, Fixture, TeamSeason, Title
 from app.utils import normalize_team_name
 from sqlalchemy import text
 import traceback
@@ -36,7 +36,7 @@ def manage_divisions():
     divisions = Division.query.filter_by(season_id=current_season.id).all()
     return render_template('admin/divisions.html', divisions=divisions, season=current_season, form=form)
 
-@bp.route('/teams', methods=['GET', 'POST'])
+@bp.route('/teams')
 @login_required
 @admin_required
 def manage_teams():
@@ -51,7 +51,138 @@ def manage_teams():
     teams = Team.query.all()
     return render_template('admin/teams.html', teams=teams, form=form)
 
-@bp.route('/end-season')
+@bp.route('/teams/<int:team_id>/titles', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manage_team_titles(team_id):
+    team = Team.query.get_or_404(team_id)
+    
+    form = TitleForm()
+    # Set up season choices
+    form.season_id.choices = [(s.id, s.name) for s in Season.query.order_by(Season.start_date.desc()).all()]
+    # Set up division choices
+    form.division_id.choices = [(d.id, d.name) for d in Division.query.all()]
+    # Set the team_id to the current team and disable the field as it's predetermined
+    form.team_id.data = team_id
+    form.team_id.render_kw = {'disabled': 'disabled'}
+    
+    # Get all existing titles for this team
+    titles = Title.query.filter_by(team_id=team_id).order_by(Title.season_id.desc()).all()
+    
+    if form.validate_on_submit():
+        try:
+            # Check if title already exists
+            existing_title = Title.query.filter_by(
+                team_id=team_id,
+                season_id=form.season_id.data,
+                type=form.type.data,
+                division_id=form.division_id.data if form.type.data == 'league' else None,
+                is_runner_up=form.is_runner_up.data
+            ).first()
+            
+            if not existing_title:
+                title = Title(
+                    team_id=team_id,
+                    season_id=form.season_id.data,
+                    type=form.type.data,
+                    division_id=form.division_id.data if form.type.data == 'league' else None,
+                    is_runner_up=form.is_runner_up.data
+                )
+                db.session.add(title)
+                db.session.commit()
+                flash('Title added successfully.', 'success')
+            else:
+                flash('This title already exists for this team.', 'warning')
+                
+        except Exception as e:
+            flash(f'Error adding title: {str(e)}', 'danger')
+            db.session.rollback()
+            
+    return render_template('admin/team_titles.html', 
+                         team=team,
+                         form=form,
+                         titles=titles)
+                         
+@bp.route('/titles/<int:title_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_title(title_id):
+    title = Title.query.get_or_404(title_id)
+    team_id = title.team_id
+    try:
+        db.session.delete(title)
+        db.session.commit()
+        flash('Title deleted successfully.', 'success')
+    except Exception as e:
+        flash(f'Error deleting title: {str(e)}', 'danger')
+        db.session.rollback()
+        
+    return redirect(url_for('admin.manage_team_titles', team_id=team_id))
+
+def award_league_titles(season_id):
+    """Award league titles for all divisions in a season"""
+    divisions = Division.query.filter_by(season_id=season_id).all()
+    
+    for division in divisions:
+        # Get the champion (team in position 1)
+        champion = TeamSeason.query.filter_by(
+            division_id=division.id,
+            season_id=season_id,
+            position=1
+        ).first()
+        
+        if champion:
+            # Check if title already exists
+            existing_title = Title.query.filter_by(
+                team_id=champion.team_id,
+                season_id=season_id,
+                type='league',
+                division_id=division.id,
+                is_runner_up=False
+            ).first()
+            
+            if not existing_title:
+                # Create the title
+                title = Title(
+                    team_id=champion.team_id,
+                    season_id=season_id,
+                    type='league',
+                    division_id=division.id,
+                    is_runner_up=False
+                )
+                db.session.add(title)
+                
+        # Get the runner-up (position 2)
+        runner_up = TeamSeason.query.filter_by(
+            division_id=division.id,
+            season_id=season_id,
+            position=2
+        ).first()
+        
+        if runner_up:
+            # Check if runner-up title already exists
+            existing_title = Title.query.filter_by(
+                team_id=runner_up.team_id,
+                season_id=season_id,
+                type='league',
+                division_id=division.id,
+                is_runner_up=True
+            ).first()
+            
+            if not existing_title:
+                # Create the runner-up title
+                title = Title(
+                    team_id=runner_up.team_id,
+                    season_id=season_id,
+                    type='league',
+                    division_id=division.id,
+                    is_runner_up=True
+                )
+                db.session.add(title)
+    
+    db.session.commit()
+
+@bp.route('/end-season', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def end_season():
@@ -59,7 +190,25 @@ def end_season():
     if not current_season:
         flash('No current season found.', 'warning')
         return redirect(url_for('admin.manage_seasons'))
-    return render_template('admin/end_season.html', season=current_season)
+        
+    form = EndSeasonForm()
+    
+    if form.validate_on_submit() and form.confirm.data:
+        try:
+            # Award league titles before ending the season
+            award_league_titles(current_season.id)
+            
+            # Proceed with season end logic...
+            # [Your existing season end code here]
+            
+            flash('Season ended successfully and titles awarded.', 'success')
+            return redirect(url_for('admin.dashboard'))
+        except Exception as e:
+            current_app.logger.error(f"Error ending season: {str(e)}")
+            flash('Error ending season. Please check the logs.', 'danger')
+            db.session.rollback()
+            
+    return render_template('admin/end_season.html', season=current_season, form=form)
 
 @bp.route('/upload-scores')
 @login_required

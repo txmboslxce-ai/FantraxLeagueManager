@@ -28,6 +28,10 @@ class BulkFixtureForm(FlaskForm):
         if not field.data:
             raise ValidationError("Please select a division")
 
+class EndSeasonForm(FlaskForm):
+    confirm = BooleanField('I confirm that I want to end the current season', validators=[DataRequired()])
+    submit = SubmitField('End Season')
+
 class ScoreUploadForm(FlaskForm):
     gameweek = SelectField('Gameweek', coerce=int, validators=[DataRequired()])
     division = SelectField('Division', coerce=int, validators=[DataRequired()])
