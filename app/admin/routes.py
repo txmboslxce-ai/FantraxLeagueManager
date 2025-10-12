@@ -325,17 +325,49 @@ def upload_scores():
                 if not score_line.strip():
                     continue
                     
-                # Split on multiple spaces (2 or more)
-                parts = re.split(r'\s{2,}', score_line.strip())
-                if len(parts) != 4:
-                    flash(f'Invalid line format (expected 4 parts): {score_line}', 'danger')
+                # Split on single space, but intelligently to handle "name score name score" format
+                all_parts = score_line.strip().split()
+                if len(all_parts) < 4:  # Need at least 4 parts
+                    flash(f'Invalid line format (not enough parts): {score_line}', 'danger')
                     error_count += 1
                     continue
+                
+                # Find the scores (they should be numeric)
+                scores_indices = []
+                for i, part in enumerate(all_parts):
+                    # Remove any trailing trophy emoji from score
+                    clean_part = part.split('🏆')[0] if '🏆' in part else part
+                    try:
+                        float(clean_part)
+                        scores_indices.append(i)
+                    except ValueError:
+                        continue
+                
+                if len(scores_indices) != 2:
+                    flash(f'Could not identify exactly two scores in line: {score_line}', 'danger')
+                    error_count += 1
+                    continue
+                
+                # First score position determines team name boundaries
+                first_score_pos = scores_indices[0]
+                second_score_pos = scores_indices[1]
+                
+                # Home team name is everything before first score
+                home_team_name = ' '.join(all_parts[:first_score_pos])
+                # Away team name is everything between scores
+                away_team_name = ' '.join(all_parts[first_score_pos + 1:second_score_pos])
+                
+                # Get the scores (clean any trophy emoji)
+                home_score = all_parts[first_score_pos].split('🏆')[0]
+                away_score = all_parts[second_score_pos].split('🏆')[0]
+                
+                print(f"\nParsed line:")
+                print(f"Home team: '{home_team_name}'")
+                print(f"Home score: {home_score}")
+                print(f"Away team: '{away_team_name}'")
+                print(f"Away score: {away_score}")
                     
-                home_team_name = parts[0]
-                home_score = parts[1]
-                away_team_name = parts[2]
-                away_score = parts[3]
+                # Variables already set in the parsing code above
                 
                 # Get all fixtures for this gameweek and division first
                 fixtures = Fixture.query.filter_by(
