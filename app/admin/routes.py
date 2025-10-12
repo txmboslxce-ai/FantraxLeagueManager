@@ -5,9 +5,9 @@ from app.admin import bp
 from app.admin.forms import (BulkFixtureForm, DivisionForm, TeamForm, 
                            EndSeasonForm, TitleForm, EditTeamForm, ScoreUploadForm)
 from app.admin.decorators import admin_required
-from app.models import Season, Division, Gameweek, Team, Fixture, TeamSeason, Title
+from app.models import Season, Division, Gameweek, Team, Fixture, TeamSeason, Title, ManagerOfTheMonth
 from app.utils import normalize_team_name
-from sqlalchemy import text
+from sqlalchemy import text, or_
 import traceback
 import re
 
@@ -52,6 +52,12 @@ def manage_teams():
     
     if form.validate_on_submit():
         try:
+            # Check if team name already exists
+            existing_team = Team.query.filter_by(name=form.name.data).first()
+            if existing_team:
+                flash(f'A team with name "{form.name.data}" already exists.', 'danger')
+                return redirect(url_for('admin.manage_teams'))
+                
             # Get next available ID
             result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM team"))
             next_id = result.scalar()
@@ -97,11 +103,31 @@ def manage_teams():
 def delete_team(team_id):
     team = Team.query.get_or_404(team_id)
     try:
+        # First delete all team_season entries
+        TeamSeason.query.filter_by(team_id=team_id).delete()
+        
+        # Then delete any titles
+        Title.query.filter_by(team_id=team_id).delete()
+        
+        # Delete any manager of the month awards
+        ManagerOfTheMonth.query.filter_by(team_id=team_id).delete()
+        
+        # Delete any fixtures where this team is involved
+        Fixture.query.filter(
+            or_(
+                Fixture.home_team_id == team_id,
+                Fixture.away_team_id == team_id
+            )
+        ).delete()
+        
+        # Finally delete the team
         db.session.delete(team)
         db.session.commit()
-        flash(f'Team {team.name} deleted successfully.', 'success')
+        flash(f'Team {team.name} and all related data deleted successfully.', 'success')
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f'Error deleting team: {str(e)}')
+        current_app.logger.error(traceback.format_exc())
         flash(f'Error deleting team: {str(e)}', 'danger')
     
     return redirect(url_for('admin.manage_teams'))
