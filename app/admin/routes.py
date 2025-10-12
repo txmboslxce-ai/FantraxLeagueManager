@@ -48,6 +48,31 @@ def manage_teams():
     form = TeamForm()
     form.division_id.choices = [(d.id, d.name) for d in Division.query.filter_by(season_id=current_season.id).all()]
     
+    if form.validate_on_submit():
+        try:
+            team = Team(
+                name=form.name.data,
+                manager_name=form.manager_name.data
+            )
+            db.session.add(team)
+            db.session.flush()  # Get the team ID
+            
+            # Create TeamSeason relationship
+            team_season = TeamSeason(
+                team_id=team.id,
+                season_id=current_season.id,
+                division_id=form.division_id.data
+            )
+            db.session.add(team_season)
+            db.session.commit()
+            
+            flash(f'Team {team.name} created successfully.', 'success')
+            return redirect(url_for('admin.manage_teams'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating team: {str(e)}', 'danger')
+    
     teams = Team.query.all()
     return render_template('admin/teams.html', teams=teams, form=form)
 
