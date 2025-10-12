@@ -51,6 +51,21 @@ def manage_teams():
     teams = Team.query.all()
     return render_template('admin/teams.html', teams=teams, form=form)
 
+@bp.route('/teams/<int:team_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_team(team_id):
+    team = Team.query.get_or_404(team_id)
+    try:
+        db.session.delete(team)
+        db.session.commit()
+        flash(f'Team {team.name} deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting team: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin.manage_teams'))
+
 @bp.route('/teams/<int:team_id>/edit', methods=['GET', 'POST'])
 @login_required
 @admin_required
