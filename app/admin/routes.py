@@ -2,7 +2,8 @@ from flask import render_template, flash, redirect, url_for, current_app, reques
 from flask_login import login_required
 from app import db
 from app.admin import bp
-from app.admin.forms import BulkFixtureForm, DivisionForm, TeamForm, EndSeasonForm, TitleForm, EditTeamForm
+from app.admin.forms import (BulkFixtureForm, DivisionForm, TeamForm, 
+                           EndSeasonForm, TitleForm, EditTeamForm, ScoreUploadForm)
 from app.admin.decorators import admin_required
 from app.models import Season, Division, Gameweek, Team, Fixture, TeamSeason, Title
 from app.utils import normalize_team_name
@@ -283,7 +284,7 @@ def end_season():
             
     return render_template('admin/end_season.html', season=current_season, form=form)
 
-@bp.route('/upload-scores')
+@bp.route('/upload-scores', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def upload_scores():
@@ -291,7 +292,88 @@ def upload_scores():
     if not current_season:
         flash('No current season found. Please create a season first.', 'warning')
         return redirect(url_for('admin.manage_seasons'))
-    return render_template('admin/scores.html', season=current_season)
+        
+    form = ScoreUploadForm()
+    
+    # Set up form choices
+    form.gameweek.choices = [(gw.id, f'Gameweek {gw.number}') 
+                            for gw in Gameweek.query.filter_by(season_id=current_season.id)
+                            .order_by(Gameweek.number).all()]
+                            
+    form.division.choices = [(d.id, d.name) 
+                            for d in Division.query.filter_by(season_id=current_season.id).all()]
+    
+    if form.validate_on_submit():
+        try:
+            # Process scores upload
+            scores = form.scores_text.data.strip().split('\n')
+            success_count = 0
+            error_count = 0
+            
+            for score_line in scores:
+                if not score_line.strip():
+                    continue
+                    
+                parts = [p.strip() for p in score_line.split('\t')]
+                if len(parts) != 4:
+                    flash(f'Invalid line format: {score_line}', 'danger')
+                    error_count += 1
+                    continue
+                    
+                home_team_name, home_score, away_team_name, away_score = parts
+                
+                # Get the teams
+                home_team = Team.query.filter_by(name=home_team_name).first()
+                away_team = Team.query.filter_by(name=away_team_name).first()
+                
+                if not home_team or not away_team:
+                    if not home_team:
+                        flash(f'Could not find home team: {home_team_name}', 'danger')
+                    if not away_team:
+                        flash(f'Could not find away team: {away_team_name}', 'danger')
+                    error_count += 1
+                    continue
+                
+                try:
+                    home_score = int(home_score)
+                    away_score = int(away_score)
+                except ValueError:
+                    flash(f'Invalid score format in line: {score_line}', 'danger')
+                    error_count += 1
+                    continue
+                
+                # Find the fixture
+                fixture = Fixture.query.filter_by(
+                    gameweek_id=form.gameweek.data,
+                    division_id=form.division.data,
+                    home_team_id=home_team.id,
+                    away_team_id=away_team.id
+                ).first()
+                
+                if not fixture:
+                    flash(f'Could not find fixture: {home_team_name} vs {away_team_name}', 'danger')
+                    error_count += 1
+                    continue
+                
+                # Update the fixture with scores
+                fixture.home_score = home_score
+                fixture.away_score = away_score
+                fixture.played = True
+                
+                success_count += 1
+            
+            if success_count > 0:
+                db.session.commit()
+                flash(f'Successfully updated {success_count} scores.', 'success')
+            
+            if error_count > 0:
+                flash(f'Failed to update {error_count} scores. Check the error messages above.', 'warning')
+                
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error uploading scores: {str(e)}', 'danger')
+    
+    return render_template('admin/scores.html', season=current_season, form=form)
 
 @bp.route('/cups')
 @login_required
