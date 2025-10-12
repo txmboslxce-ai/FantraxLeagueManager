@@ -56,6 +56,42 @@ def end_season():
         return redirect(url_for('admin.manage_seasons'))
     return render_template('admin/end_season.html', season=current_season)
 
+@bp.route('/upload-scores')
+@login_required
+@admin_required
+def upload_scores():
+    current_season = Season.query.filter_by(is_current=True).first()
+    if not current_season:
+        flash('No current season found. Please create a season first.', 'warning')
+        return redirect(url_for('admin.manage_seasons'))
+    return render_template('admin/scores.html', season=current_season)
+
+@bp.route('/cups')
+@login_required
+@admin_required
+def manage_cups():
+    current_season = Season.query.filter_by(is_current=True).first()
+    if not current_season:
+        flash('No current season found. Please create a season first.', 'warning')
+        return redirect(url_for('admin.manage_seasons'))
+    return render_template('admin/cups.html', season=current_season)
+
+@bp.route('/manager-month')
+@login_required
+@admin_required
+def manage_manager_month():
+    current_season = Season.query.filter_by(is_current=True).first()
+    if not current_season:
+        flash('No current season found. Please create a season first.', 'warning')
+        return redirect(url_for('admin.manage_seasons'))
+    return render_template('admin/manager_month.html', season=current_season)
+
+@bp.route('/rules')
+@login_required
+@admin_required
+def edit_rules():
+    return render_template('admin/edit_rules.html')
+
 @bp.route('/fixtures', methods=['GET', 'POST'])
 @login_required
 @admin_required
