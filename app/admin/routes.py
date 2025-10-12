@@ -50,7 +50,12 @@ def manage_teams():
     
     if form.validate_on_submit():
         try:
+            # Get next available ID
+            result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM team"))
+            next_id = result.scalar()
+            
             team = Team(
+                id=next_id,
                 name=form.name.data,
                 manager_name=form.manager_name.data
             )
