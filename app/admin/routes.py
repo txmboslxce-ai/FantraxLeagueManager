@@ -66,7 +66,10 @@ def manage_teams():
             team_season = TeamSeason(
                 team_id=team.id,
                 season_id=current_season.id,
-                division_id=form.division_id.data
+                division_id=form.division_id.data,
+                points=0,
+                total_score=0,
+                position=None  # Position will be set when the season ends
             )
             db.session.add(team_season)
             db.session.commit()
