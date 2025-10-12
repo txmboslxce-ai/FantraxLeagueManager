@@ -2,7 +2,7 @@ from flask import render_template, flash, redirect, url_for, current_app, reques
 from flask_login import login_required
 from app import db
 from app.admin import bp
-from app.admin.forms import BulkFixtureForm, DivisionForm, TeamForm, EndSeasonForm, TitleForm
+from app.admin.forms import BulkFixtureForm, DivisionForm, TeamForm, EndSeasonForm, TitleForm, EditTeamForm
 from app.admin.decorators import admin_required
 from app.models import Season, Division, Gameweek, Team, Fixture, TeamSeason, Title
 from app.utils import normalize_team_name
@@ -36,7 +36,7 @@ def manage_divisions():
     divisions = Division.query.filter_by(season_id=current_season.id).all()
     return render_template('admin/divisions.html', divisions=divisions, season=current_season, form=form)
 
-@bp.route('/teams')
+@bp.route('/teams', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def manage_teams():
@@ -50,6 +50,31 @@ def manage_teams():
     
     teams = Team.query.all()
     return render_template('admin/teams.html', teams=teams, form=form)
+
+@bp.route('/teams/<int:team_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_team(team_id):
+    team = Team.query.get_or_404(team_id)
+    form = EditTeamForm()
+    
+    if form.validate_on_submit():
+        try:
+            team.name = form.name.data
+            team.manager_name = form.manager_name.data
+            db.session.commit()
+            flash('Team updated successfully.', 'success')
+            return redirect(url_for('admin.manage_teams'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating team: {str(e)}', 'danger')
+            
+    # Pre-populate form with current values
+    if request.method == 'GET':
+        form.name.data = team.name
+        form.manager_name.data = team.manager_name
+        
+    return render_template('admin/edit_team.html', form=form, team=team)
 
 @bp.route('/teams/<int:team_id>/titles', methods=['GET', 'POST'])
 @login_required
