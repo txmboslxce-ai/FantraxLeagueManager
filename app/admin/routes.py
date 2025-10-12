@@ -2,7 +2,7 @@ from flask import render_template, flash, redirect, url_for, current_app, reques
 from flask_login import login_required
 from app import db
 from app.admin import bp
-from app.admin.forms import BulkFixtureForm
+from app.admin.forms import BulkFixtureForm, DivisionForm, TeamForm
 from app.admin.decorators import admin_required
 from app.models import Season, Division, Gameweek, Team, Fixture
 from app.utils import normalize_team_name
@@ -23,7 +23,7 @@ def manage_seasons():
     seasons = Season.query.order_by(Season.start_date.desc()).all()
     return render_template('admin/seasons.html', seasons=seasons)
 
-@bp.route('/divisions')
+@bp.route('/divisions', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def manage_divisions():
@@ -32,10 +32,11 @@ def manage_divisions():
         flash('No current season found. Please create a season first.', 'warning')
         return redirect(url_for('admin.manage_seasons'))
         
+    form = DivisionForm()
     divisions = Division.query.filter_by(season_id=current_season.id).all()
-    return render_template('admin/divisions.html', divisions=divisions, season=current_season)
+    return render_template('admin/divisions.html', divisions=divisions, season=current_season, form=form)
 
-@bp.route('/teams')
+@bp.route('/teams', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def manage_teams():
@@ -44,8 +45,11 @@ def manage_teams():
         flash('No current season found. Please create a season first.', 'warning')
         return redirect(url_for('admin.manage_seasons'))
         
+    form = TeamForm()
+    form.division_id.choices = [(d.id, d.name) for d in Division.query.filter_by(season_id=current_season.id).all()]
+    
     teams = Team.query.all()
-    return render_template('admin/teams.html', teams=teams)
+    return render_template('admin/teams.html', teams=teams, form=form)
 
 @bp.route('/end-season')
 @login_required
