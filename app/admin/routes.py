@@ -35,7 +35,10 @@ def manage_divisions():
         return redirect(url_for('admin.manage_seasons'))
         
     form = DivisionForm()
-    divisions = Division.query.filter_by(season_id=current_season.id).all()
+    divisions = sorted(
+        Division.query.filter_by(season_id=current_season.id).all(),
+        key=lambda x: x.order
+    )
     return render_template('admin/divisions.html', divisions=divisions, season=current_season, form=form)
 
 @bp.route('/teams', methods=['GET', 'POST'])
@@ -528,8 +531,11 @@ def manage_fixtures():
         flash("No current season found. Please create a season first.", 'warning')
         return redirect(url_for('admin.manage_seasons'))
 
-    # Get divisions for current season
-    divisions = Division.query.filter_by(season_id=current_season.id).all()
+    # Get divisions for current season, ordered by the custom order property
+    divisions = sorted(
+        Division.query.filter_by(season_id=current_season.id).all(),
+        key=lambda x: x.order
+    )
     if not divisions:
         flash("No divisions found for the current season. Please create a division first.", 'warning')
         return redirect(url_for('admin.manage_divisions'))
