@@ -3,9 +3,10 @@ from flask_login import login_required
 from app import db
 from app.admin import bp
 from app.admin.forms import (BulkFixtureForm, DivisionForm, TeamForm, 
-                           EndSeasonForm, TitleForm, EditTeamForm, ScoreUploadForm)
+                           EndSeasonForm, TitleForm, EditTeamForm, ScoreUploadForm,
+                           ManagerMonthForm)
 from app.admin.decorators import admin_required
-from app.models import Season, Division, Gameweek, Team, Fixture, TeamSeason, Title, ManagerOfTheMonth
+from app.models import Season, Division, Gameweek, Team, Fixture, TeamSeason, Title, ManagerOfTheMonth, ManagerMonth
 from app.utils import normalize_team_name
 from sqlalchemy import text, or_
 import traceback
@@ -493,7 +494,7 @@ def manage_cups():
         return redirect(url_for('admin.manage_seasons'))
     return render_template('admin/cups.html', season=current_season)
 
-@bp.route('/manager-month')
+@bp.route('/manager-month', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def manage_manager_month():
@@ -501,7 +502,39 @@ def manage_manager_month():
     if not current_season:
         flash('No current season found. Please create a season first.', 'warning')
         return redirect(url_for('admin.manage_seasons'))
-    return render_template('admin/manager_month.html', season=current_season)
+        
+    # Create form
+    form = ManagerMonthForm()
+    
+    # Set up gameweek choices
+    gameweeks = Gameweek.query.filter_by(season_id=current_season.id).order_by(Gameweek.number).all()
+    form.start_gameweek_id.choices = [(gw.id, f'Gameweek {gw.number}') for gw in gameweeks]
+    form.end_gameweek_id.choices = [(gw.id, f'Gameweek {gw.number}') for gw in gameweeks]
+    
+    # Get existing months
+    months = ManagerMonth.query.filter_by(season_id=current_season.id).order_by(ManagerMonth.start_gameweek_id).all()
+    
+    # Handle form submission
+    if form.validate_on_submit():
+        try:
+            month = ManagerMonth(
+                name=form.name.data,
+                season_id=current_season.id,
+                start_gameweek_id=form.start_gameweek_id.data,
+                end_gameweek_id=form.end_gameweek_id.data
+            )
+            db.session.add(month)
+            db.session.commit()
+            flash('Month created successfully.', 'success')
+            return redirect(url_for('admin.manage_manager_month'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating month: {str(e)}', 'danger')
+    
+    return render_template('admin/manager_month.html', 
+                         season=current_season,
+                         form=form,
+                         months=months)
 
 @bp.route('/rules')
 @login_required
