@@ -377,36 +377,55 @@ def cup_detail(cup_id):
 
 @bp.route('/manager_of_the_month')
 def manager_of_the_month():
+    """Display Manager of the Month standings with optional month filter."""
     current_season = Season.query.filter_by(is_current=True).first()
     if current_season:
         months = ManagerMonth.query.filter_by(season_id=current_season.id).all()
         
-        # Get selected month from query params
-        month_id = request.args.get('month_id', type=int)
-        selected_month = None
+        # Group months by base name (removing division suffix) and organize by division
+        month_groups = {}
+        for month in months:
+            # Extract base name and division (everything after " - ")
+            if " - " in month.name:
+                base_name = month.name.split(" - ")[0]
+                division_name = month.name.split(" - ")[1]
+            else:
+                base_name = month.name
+                division_name = "All"
+            
+            if base_name not in month_groups:
+                month_groups[base_name] = {
+                    'base_name': base_name,
+                    'divisions': {},
+                    'start_gameweek': month.start_gameweek,
+                    'end_gameweek': month.end_gameweek
+                }
+            month_groups[base_name]['divisions'][division_name] = month
         
-        if month_id:
-            selected_month = ManagerMonth.query.get_or_404(month_id)
-            if selected_month.season_id != current_season.id:
-                return redirect(url_for('main.manager_of_the_month'))
+        # Get selected month group from query params
+        month_group_name = request.args.get('month_group')
+        selected_month_group = None
+        
+        if month_group_name and month_group_name in month_groups:
+            selected_month_group = month_groups[month_group_name]
         else:
-            # Find the latest month by gameweek number that has any standings
-            latest_month = None
+            # Find the latest month group by gameweek number
+            latest_group = None
             latest_gameweek = 0
             
-            for month in months:
-                if month.end_gameweek.number > latest_gameweek and month.get_standings():
-                    latest_month = month
-                    latest_gameweek = month.end_gameweek.number
+            for group_name, group_data in month_groups.items():
+                if group_data['end_gameweek'].number > latest_gameweek:
+                    latest_group = group_name
+                    latest_gameweek = group_data['end_gameweek'].number
             
-            if latest_month:
-                return redirect(url_for('main.manager_of_the_month', month_id=latest_month.id))
+            if latest_group:
+                return redirect(url_for('main.manager_of_the_month', month_group=latest_group))
         
         return render_template('main/motm.html',
                              title='Manager of the Month',
-                             months=months,
+                             month_groups=month_groups,
                              season=current_season,
-                             selected_month=selected_month)
+                             selected_month_group=selected_month_group)
     return render_template('main/motm.html', title='Manager of the Month')
 
 @bp.route('/motm-winners')

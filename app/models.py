@@ -725,10 +725,14 @@ class ManagerMonth(db.Model):
         stats['goal_difference'] = stats['goals_for'] - stats['goals_against']
         return stats
     
-    def get_standings(self):
-        """Get all team standings for this month."""
-        # Get all teams that played in this month
-        teams = Team.query.join(
+    def get_standings(self, division_name=None):
+        """Get all team standings for this month, optionally filtered by division."""
+        # Extract division from this month's name if not provided
+        if division_name is None and " - " in self.name:
+            division_name = self.name.split(" - ")[1]
+        
+        # Base query for teams that played in this month
+        teams_query = Team.query.join(
             Fixture, or_(
                 Fixture.home_team_id == Team.id,
                 Fixture.away_team_id == Team.id
@@ -741,7 +745,20 @@ class ManagerMonth(db.Model):
             Gameweek.number <= self.end_gameweek.number,
             Fixture.home_score.isnot(None),
             Fixture.away_score.isnot(None)
-        ).distinct().all()
+        )
+        
+        # If division specified, filter by division
+        if division_name and division_name != "All":
+            teams_query = teams_query.join(
+                TeamSeason, TeamSeason.team_id == Team.id
+            ).join(
+                Division, TeamSeason.division_id == Division.id
+            ).filter(
+                Division.name == division_name,
+                TeamSeason.season_id == self.season_id
+            )
+        
+        teams = teams_query.distinct().all()
         
         # Calculate stats for each team
         standings = []

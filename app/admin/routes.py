@@ -541,20 +541,31 @@ def manage_manager_month():
     # Handle form submission
     if form.validate_on_submit():
         try:
-            # Get next available ID
-            result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM manager_month"))
-            next_id = result.scalar()
+            # Get all divisions for current season
+            divisions = Division.query.filter_by(season_id=current_season.id).all()
             
-            month = ManagerMonth(
-                id=next_id,
-                name=form.name.data,
-                season_id=current_season.id,
-                start_gameweek_id=form.start_gameweek_id.data,
-                end_gameweek_id=form.end_gameweek_id.data
-            )
-            db.session.add(month)
+            created_count = 0
+            for division in divisions:
+                # Get next available ID
+                result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM manager_month"))
+                next_id = result.scalar()
+                
+                # Create month name with division
+                month_name = f"{form.name.data} - {division.name}"
+                
+                month = ManagerMonth(
+                    id=next_id,
+                    name=month_name,
+                    season_id=current_season.id,
+                    start_gameweek_id=form.start_gameweek_id.data,
+                    end_gameweek_id=form.end_gameweek_id.data
+                )
+                db.session.add(month)
+                db.session.flush()  # Get the ID for potential future use
+                created_count += 1
+            
             db.session.commit()
-            flash('Month created successfully.', 'success')
+            flash(f'Successfully created {created_count} manager months (one for each division).', 'success')
             return redirect(url_for('admin.manage_manager_month'))
         except Exception as e:
             db.session.rollback()
