@@ -541,7 +541,12 @@ def manage_manager_month():
     # Handle form submission
     if form.validate_on_submit():
         try:
+            # Get next available ID
+            result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM manager_month"))
+            next_id = result.scalar()
+            
             month = ManagerMonth(
+                id=next_id,
                 name=form.name.data,
                 season_id=current_season.id,
                 start_gameweek_id=form.start_gameweek_id.data,
@@ -553,6 +558,8 @@ def manage_manager_month():
             return redirect(url_for('admin.manage_manager_month'))
         except Exception as e:
             db.session.rollback()
+            current_app.logger.error(f'Error creating month: {str(e)}')
+            current_app.logger.error(traceback.format_exc())
             flash(f'Error creating month: {str(e)}', 'danger')
     
     return render_template('admin/manager_month.html', 
