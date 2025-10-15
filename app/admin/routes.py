@@ -469,6 +469,30 @@ def upload_scores():
                 fixture.away_score = away_score
                 fixture.played = True
                 
+                # Get both teams' seasons and update their totals
+                home_team_season = TeamSeason.query.filter_by(
+                    team_id=fixture.home_team_id,
+                    season_id=current_season.id
+                ).first()
+                
+                away_team_season = TeamSeason.query.filter_by(
+                    team_id=fixture.away_team_id,
+                    season_id=current_season.id
+                ).first()
+                
+                if home_team_season and away_team_season:
+                    # Update points and total scores
+                    home_team_season.total_score += home_score
+                    away_team_season.total_score += away_score
+                    
+                    if home_score > away_score:
+                        home_team_season.points += 3
+                    elif home_score < away_score:
+                        away_team_season.points += 3
+                    else:
+                        home_team_season.points += 1
+                        away_team_season.points += 1
+                
                 success_count += 1
             
             if success_count > 0:
