@@ -573,6 +573,72 @@ def manage_manager_month():
 def edit_rules():
     return render_template('admin/edit_rules.html')
 
+@bp.route('/recalculate-totals', methods=['POST'])
+@login_required
+@admin_required
+def recalculate_totals():
+    """Recalculate all team totals for the current season"""
+    try:
+        current_season = Season.query.filter_by(is_current=True).first()
+        if not current_season:
+            flash('No current season found.', 'danger')
+            return redirect(url_for('admin.dashboard'))
+        
+        # Get all team seasons for current season
+        team_seasons = TeamSeason.query.filter_by(season_id=current_season.id).all()
+        
+        updated_count = 0
+        for ts in team_seasons:
+            # Reset totals
+            old_points = ts.points
+            old_score = ts.total_score
+            ts.points = 0
+            ts.total_score = 0.0
+            
+            # Get all fixtures for this team in current season
+            fixtures = Fixture.query.join(
+                Gameweek, Fixture.gameweek_id == Gameweek.id
+            ).filter(
+                Gameweek.season_id == current_season.id,
+                or_(
+                    Fixture.home_team_id == ts.team_id,
+                    Fixture.away_team_id == ts.team_id
+                ),
+                Fixture.home_score.isnot(None),
+                Fixture.away_score.isnot(None)
+            ).all()
+            
+            for fixture in fixtures:
+                if fixture.home_team_id == ts.team_id:
+                    # This team is home
+                    ts.total_score += fixture.home_score
+                    if fixture.home_score > fixture.away_score:
+                        ts.points += 3  # Win
+                    elif fixture.home_score == fixture.away_score:
+                        ts.points += 1  # Draw
+                else:
+                    # This team is away
+                    ts.total_score += fixture.away_score
+                    if fixture.away_score > fixture.home_score:
+                        ts.points += 3  # Win
+                    elif fixture.away_score == fixture.home_score:
+                        ts.points += 1  # Draw
+            
+            if old_points != ts.points or old_score != ts.total_score:
+                updated_count += 1
+        
+        # Commit all changes
+        db.session.commit()
+        flash(f'Successfully recalculated totals for {updated_count} teams in season {current_season.name}.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Error recalculating totals: {str(e)}')
+        current_app.logger.error(traceback.format_exc())
+        flash(f'Error recalculating totals: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin.dashboard'))
+
 @bp.route('/manage_fixtures', methods=['GET', 'POST'])
 @login_required
 @admin_required

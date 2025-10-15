@@ -115,5 +115,24 @@
         </div>
       </div>
     </div>
+
+    <!-- System Maintenance -->
+    <div class="col-md-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <h2 class="h4 mb-0">System Maintenance</h2>
+        </div>
+        <div class="card-body">
+          <div class="list-group">
+            <form method="POST" action="{{ url_for('admin.recalculate_totals') }}" style="display: inline;">
+              <button type="submit" class="list-group-item list-group-item-action btn btn-outline-warning" 
+                      onclick="return confirm('This will recalculate all team points and scores for the current season. Continue?')">
+                <i class="fas fa-calculator me-2"></i> Recalculate Team Totals
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
 </div>
 {% endblock %}
