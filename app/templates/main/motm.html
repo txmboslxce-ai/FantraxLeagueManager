@@ -198,13 +198,12 @@
     <div class="row mb-4">
         <div class="col-9">
             <form method="GET">
-                <select name="month_id" class="form-select" onchange="this.form.submit()">
+                <select name="month_group" class="form-select" onchange="this.form.submit()">
                     <option value="">Select Month</option>
-                    {% for m in months|sort(attribute='start_gameweek.number', reverse=true) %}
-                        {% set standings = m.get_standings() %}
-                        {% if standings %}
-                            <option value="{{ m.id }}" {% if selected_month and selected_month.id == m.id %}selected{% endif %}>
-                                {{ m.name }} - {{ season.name }}{% if not m.has_fixtures %} (In Progress){% endif %}
+                    {% for group_name, group_months in month_groups.items() %}
+                        {% if group_months %}
+                            <option value="{{ group_name }}" {% if selected_group_name == group_name %}selected{% endif %}>
+                                {{ group_name }} - {{ season.name }}
                             </option>
                         {% endif %}
                     {% endfor %}
@@ -218,10 +217,11 @@
         </div>
     </div>
 
-    {% if selected_month %}
+    {% if selected_months %}
     <div class="month-info">
-        Gameweeks {{ selected_month.start_gameweek.number }} - {{ selected_month.end_gameweek.number }}
-        {% if not selected_month.has_fixtures %}(In Progress){% endif %}
+        {% if selected_months %}
+            Gameweeks {{ selected_months[0].start_gameweek.number }} - {{ selected_months[0].end_gameweek.number }}
+        {% endif %}
     </div>
 
     <div class="view-selector">
@@ -229,83 +229,88 @@
         <button type="button" onclick="switchView('form')">Form</button>
     </div>
 
-    <div class="table-container">
-        <table class="table-modern stats-view">
-            <thead>
-                <tr>
-                    <th style="width: 40%">Team</th>
-                    <th class="text-center">P</th>
-                    <th class="text-center hide-mobile hide-form">W</th>
-                    <th class="text-center hide-mobile hide-form">D</th>
-                    <th class="text-center hide-mobile hide-form">L</th>
-                    <th class="text-center hide-stats">Form</th>
-                    <th class="text-center hide-form">PF</th>
-                    <th class="text-center">Pts</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% set standings = selected_month.get_standings() %}
-                {% for standing in standings %}
-                <tr>
-                    <td>
-                        <div class="team-cell">
-                            <div class="position {% if loop.index == 1 %}position-first{% else %}position-normal{% endif %}">
-                                {{ loop.index }}
-                            </div>
-                            <div class="team-info">
-                                <a href="{{ url_for('main.team_profile', team_id=standing.team.id) }}" class="team-name">
-                                    {{ standing.team.name }}
-                                </a>
-                                <span class="manager-name">{{ standing.team.manager_name }}</span>
-                                {% set team_season = standing.team.seasons|selectattr('season_id', 'eq', season.id)|first %}
-                                <span class="division-name">{{ team_season.division.name }}</span>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="text-center">{{ standing.played }}</td>
-                    <td class="text-center hide-mobile hide-form">{{ standing.wins }}</td>
-                    <td class="text-center hide-mobile hide-form">{{ standing.draws }}</td>
-                    <td class="text-center hide-mobile hide-form">{{ standing.losses }}</td>
-                    <td class="text-center hide-stats">
-                        {% set month_fixtures = [] %}
-                        {% for fixture in standing.team.home_fixtures %}
-                            {% if fixture.gameweek.number >= selected_month.start_gameweek.number and fixture.gameweek.number <= selected_month.end_gameweek.number and fixture.home_score is not none %}
-                                {% set _ = month_fixtures.append({'fixture': fixture, 'is_home': true, 'gameweek': fixture.gameweek.number}) %}
-                            {% endif %}
+    <!-- Show separate table for each division -->
+    {% for month in selected_months %}
+        {% set division_name = month.name.split(' - ')[1] if ' - ' in month.name else 'All Divisions' %}
+        <div class="mb-4">
+            <h4>{{ division_name }}</h4>
+            <div class="table-container">
+                <table class="table-modern stats-view">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%">Team</th>
+                            <th class="text-center">P</th>
+                            <th class="text-center hide-mobile hide-form">W</th>
+                            <th class="text-center hide-mobile hide-form">D</th>
+                            <th class="text-center hide-mobile hide-form">L</th>
+                            <th class="text-center hide-stats">Form</th>
+                            <th class="text-center hide-form">PF</th>
+                            <th class="text-center">Pts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set standings = month.get_standings() %}
+                        {% for standing in standings %}
+                        <tr>
+                            <td>
+                                <div class="team-cell">
+                                    <div class="position {% if loop.index == 1 %}position-first{% else %}position-normal{% endif %}">
+                                        {{ loop.index }}
+                                    </div>
+                                    <div class="team-info">
+                                        <a href="{{ url_for('main.team_profile', team_id=standing.team.id) }}" class="team-name">
+                                            {{ standing.team.name }}
+                                        </a>
+                                        <span class="manager-name">{{ standing.team.manager_name }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-center">{{ standing.played }}</td>
+                            <td class="text-center hide-mobile hide-form">{{ standing.wins }}</td>
+                            <td class="text-center hide-mobile hide-form">{{ standing.draws }}</td>
+                            <td class="text-center hide-mobile hide-form">{{ standing.losses }}</td>
+                            <td class="text-center hide-stats">
+                                {% set month_fixtures = [] %}
+                                {% for fixture in standing.team.home_fixtures %}
+                                    {% if fixture.gameweek.number >= month.start_gameweek.number and fixture.gameweek.number <= month.end_gameweek.number and fixture.home_score is not none %}
+                                        {% set _ = month_fixtures.append({'fixture': fixture, 'is_home': true, 'gameweek': fixture.gameweek.number}) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% for fixture in standing.team.away_fixtures %}
+                                    {% if fixture.gameweek.number >= month.start_gameweek.number and fixture.gameweek.number <= month.end_gameweek.number and fixture.home_score is not none %}
+                                        {% set _ = month_fixtures.append({'fixture': fixture, 'is_home': false, 'gameweek': fixture.gameweek.number}) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% set sorted_fixtures = month_fixtures|sort(attribute='gameweek') %}
+                                {% for f in sorted_fixtures[-5:] %}
+                                    {% if f.is_home %}
+                                        {% if f.fixture.home_score > f.fixture.away_score %}
+                                            <span class="form-indicator form-W">W</span>
+                                        {% elif f.fixture.home_score < f.fixture.away_score %}
+                                            <span class="form-indicator form-L">L</span>
+                                        {% else %}
+                                            <span class="form-indicator form-D">D</span>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if f.fixture.away_score > f.fixture.home_score %}
+                                            <span class="form-indicator form-W">W</span>
+                                        {% elif f.fixture.away_score < f.fixture.home_score %}
+                                            <span class="form-indicator form-L">L</span>
+                                        {% else %}
+                                            <span class="form-indicator form-D">D</span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
+                            <td class="text-center hide-form">{{ "%.2f"|format(standing.goals_for) }}</td>
+                            <td class="text-center"><strong>{{ standing.points }}</strong></td>
+                        </tr>
                         {% endfor %}
-                        {% for fixture in standing.team.away_fixtures %}
-                            {% if fixture.gameweek.number >= selected_month.start_gameweek.number and fixture.gameweek.number <= selected_month.end_gameweek.number and fixture.home_score is not none %}
-                                {% set _ = month_fixtures.append({'fixture': fixture, 'is_home': false, 'gameweek': fixture.gameweek.number}) %}
-                            {% endif %}
-                        {% endfor %}
-                        {% set sorted_fixtures = month_fixtures|sort(attribute='gameweek') %}
-                        {% for f in sorted_fixtures[-5:] %}
-                            {% if f.is_home %}
-                                {% if f.fixture.home_score > f.fixture.away_score %}
-                                    <span class="form-indicator form-W">W</span>
-                                {% elif f.fixture.home_score < f.fixture.away_score %}
-                                    <span class="form-indicator form-L">L</span>
-                                {% else %}
-                                    <span class="form-indicator form-D">D</span>
-                                {% endif %}
-                            {% else %}
-                                {% if f.fixture.away_score > f.fixture.home_score %}
-                                    <span class="form-indicator form-W">W</span>
-                                {% elif f.fixture.away_score < f.fixture.home_score %}
-                                    <span class="form-indicator form-L">L</span>
-                                {% else %}
-                                    <span class="form-indicator form-D">D</span>
-                                {% endif %}
-                            {% endif %}
-                        {% endfor %}
-                    </td>
-                    <td class="text-center hide-form">{{ "%.2f"|format(standing.goals_for) }}</td>
-                    <td class="text-center"><strong>{{ standing.points }}</strong></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endfor %}
     {% endif %}
     {% else %}
     <div class="alert alert-info">
